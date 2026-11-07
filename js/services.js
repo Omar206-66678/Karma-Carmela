@@ -1,0 +1,188 @@
+// منطق الأعمال — كل عملية = معاملة ذرية واحدة (مخزون + دفعات + فواتير + حسابات + خزنة)
+import { tx, ALL } from './db.js';
+import { r2, r3, r4, unitsOf } from './core.js';
+
+const now = () => new Date().toISOString();
+const PRE = { sale: 'S', purchase: 'P', sale_return: 'SR', purchase_return: 'PR' };
+async function nextNo(S, t) {
+  const k = 'no_' + t, r = await S.settings.get(k), n = (r ? r.value : 0) + 1;
+  await S.settings.put({ key: k, value: n });
+  return PRE[t] + String(n).padStart(5, '0');
+}
+const costing = async S => { const r = await S.settings.get('costing'); return r ? r.value : 'wac'; }; // 'fifo' | 'wac'
+
+// حركة حساب عميل/مورد: الرصيد الموجب = عميل عليه فلوس / مورد له فلوس
+async function ledger(S, party, type, ref, change, note = '') {
+  party.balance = r2((party.balance || 0) + change);
+  await S.parties.put(party);
+  await S.ledger.add({ partyId: party.id, date: now(), type, ref, change: r2(change), balance: party.balance, note });
+}
+const cashMove = (S, dir, amount, kind, ref, note = '', cat = '') =>
+  amount > 0 ? S.cash.add({ date: now(), dir, amount: r2(amount), kind, ref, note, cat }) : null;
+const move = (S, productId, qty, reason, ref = '') => S.moves.add({ date: now(), productId, qty, reason, ref });
+
+/** استهلاك دفعات FIFO — يرجع التكلفة بالطريقتين (FIFO والمتوسط المرجح) */
+async function consume(S, p, base) {
+  const layers = (await S.batches.idx('productId', p.id)).filter(b => b.left > 0).sort((a, b) => a.id - b.id);
+  let need = base, fifo = 0;
+  for (const b of layers) {
+    if (need <= 0) break;
+    const t = Math.min(b.left, need);
+    b.left = r3(b.left - t); need = r3(need - t); fifo += t * b.cost;
+    await S.batches.put(b);
+  }
+  if (need > 0) fifo += need * (p.avgCost || 0);
+  return { fifo, wac: base * (p.avgCost || 0) };
+}
+/** إضافة دفعة جديدة للمخزن وتحديث المتوسط المرجح */
+async function addLayer(S, p, base, cost, ref) {
+  await S.batches.add({ productId: p.id, left: base, cost, date: now(), ref });
+  const tot = p.qty + base;
+  p.avgCost = tot > 0 ? r4((p.qty * (p.avgCost || 0) + base * cost) / tot) : cost;
+  p.qty = r3(tot);
+  await S.products.put(p);
+}
+
+export const saveProduct = (p, opening = 0, openingCost = 0) => tx(ALL, async S => {
+  if (p.barcode) {
+    const dup = (await S.products.idx('barcode', p.barcode)).find(x => x.id !== p.id);
+    if (dup) throw new Error('الباركود مستخدم لصنف آخر: ' + dup.name);
+  }
+  const isNew = !p.id;
+  if (isNew) { delete p.id; p.qty = 0; p.avgCost = openingCost || p.prices.cost || 0; }
+  p.id = await S.products.put(p);
+  if (isNew && opening > 0) {
+    const q = await S.products.get(p.id);
+    await addLayer(S, q, opening, openingCost || p.prices.cost || 0, 'opening');
+    await move(S, p.id, opening, 'opening');
+  }
+  return p;
+});
+
+export const createSale = d => tx(ALL, async S => {
+  const m = await costing(S), no = await nextNo(S, 'sale');
+  const party = d.partyId ? await S.parties.get(d.partyId) : null;
+  let sub = 0, cogs = 0; const items = [];
+  for (const it of d.items) {
+    const p = await S.products.get(it.productId);
+    const u = unitsOf(p)[it.unitIdx] || unitsOf(p)[0];
+    const base = r3(it.qty * u.factor);
+    if (!(base > 0)) throw new Error('كمية غير صحيحة: ' + p.name);
+    if (p.qty + 1e-9 < base) throw new Error('المخزون غير كافٍ: ' + p.name);
+    const c = await consume(S, p, base), cost = r2(m === 'fifo' ? c.fifo : c.wac);
+    p.qty = r3(p.qty - base); await S.products.put(p);
+    await move(S, p.id, -base, 'sale', no);
+    sub += it.qty * it.price; cogs += cost;
+    items.push({ productId: p.id, name: p.name, unit: u.name, factor: u.factor, qty: it.qty, price: it.price, baseQty: base, cost, returned: 0 });
+  }
+  sub = r2(sub);
+  const discount = r2(d.discount || 0), total = r2(sub - discount);
+  const paid = r2(d.paid == null ? total : d.paid), due = r2(total - paid);
+  if (total < 0) throw new Error('الخصم أكبر من الإجمالي');
+  if (paid < 0 || due < -0.005) throw new Error('المدفوع أكبر من الإجمالي');
+  if (due > 0.005 && !party) throw new Error('اختر عميلاً للبيع الآجل');
+  if (party && party.creditLimit > 0 && (party.balance || 0) + due > party.creditLimit) throw new Error('تجاوز حد الائتمان للعميل');
+  const inv = { no, type: 'sale', date: now(), partyId: party ? party.id : null, partyName: party ? party.name : 'عميل نقدي', items, subtotal: sub, discount, total, paid, due, cogs: r2(cogs), costing: m, note: d.note || '' };
+  inv.id = await S.invoices.add(inv);
+  if (party) { await ledger(S, party, 'sale', no, total); if (paid > 0) await ledger(S, party, 'payment', no, -paid, 'دفعة مع الفاتورة'); }
+  await cashMove(S, 'in', paid, 'sale', no);
+  return inv;
+});
+
+export const createPurchase = d => tx(ALL, async S => {
+  const no = await nextNo(S, 'purchase');
+  const party = d.partyId ? await S.parties.get(d.partyId) : null;
+  let sub = 0; const items = [];
+  for (const it of d.items) {
+    const p = await S.products.get(it.productId);
+    const u = unitsOf(p)[it.unitIdx] || unitsOf(p)[0];
+    const base = r3(it.qty * u.factor);
+    if (!(base > 0)) throw new Error('كمية غير صحيحة: ' + p.name);
+    const line = r2(it.qty * it.price), cb = r4(it.price / u.factor);
+    await addLayer(S, p, base, cb, no);
+    p.prices.cost = cb; await S.products.put(p);
+    await move(S, p.id, base, 'purchase', no);
+    sub += line;
+    items.push({ productId: p.id, name: p.name, unit: u.name, factor: u.factor, qty: it.qty, price: it.price, baseQty: base, cost: line, returned: 0 });
+  }
+  sub = r2(sub);
+  const discount = r2(d.discount || 0), total = r2(sub - discount);
+  const paid = r2(d.paid == null ? total : d.paid), due = r2(total - paid);
+  if (paid < 0 || due < -0.005) throw new Error('المدفوع أكبر من الإجمالي');
+  if (due > 0.005 && !party) throw new Error('اختر مورداً للشراء الآجل');
+  const inv = { no, type: 'purchase', date: now(), partyId: party ? party.id : null, partyName: party ? party.name : 'مورد نقدي', items, subtotal: sub, discount, total, paid, due, note: d.note || '' };
+  inv.id = await S.invoices.add(inv);
+  if (party) { await ledger(S, party, 'purchase', no, total); if (paid > 0) await ledger(S, party, 'payment', no, -paid, 'دفعة مع الفاتورة'); }
+  await cashMove(S, 'out', paid, 'purchase', no);
+  return inv;
+});
+
+/** مرتجع مبيعات/مشتريات — سليم يرجع للمخزن بتكلفته الأصلية، تالف يُسجَّل خسارة */
+export const returnDoc = (kind, invId, lines, mode) => tx(ALL, async S => {
+  const inv = await S.invoices.get(invId);
+  const party = inv.partyId ? await S.parties.get(inv.partyId) : null;
+  const no = await nextNo(S, kind + '_return');
+  const items = []; let total = 0, cogs = 0;
+  for (const L of lines) {
+    if (!(L.qty > 0)) continue;
+    const it = inv.items[L.idx];
+    if (L.qty > r3(it.qty - it.returned) + 1e-9) throw new Error('كمية المرتجع أكبر من المتاحة: ' + it.name);
+    const base = r3(L.qty * it.factor), p = await S.products.get(it.productId);
+    const unitCost = it.cost / it.baseQty;
+    if (kind === 'sale') {
+      if (L.cond === 'damaged') await S.damages.add({ date: now(), productId: p.id, name: p.name, qty: base, cost: r2(unitCost * base), reason: 'مرتجع تالف', ref: no });
+      else await addLayer(S, p, base, r4(unitCost), no);
+      await move(S, p.id, L.cond === 'damaged' ? 0 : base, 'sale_return', no);
+    } else {
+      if (p.qty + 1e-9 < base) throw new Error('المخزون أقل من كمية المرتجع: ' + p.name);
+      await consume(S, p, base); p.qty = r3(p.qty - base); await S.products.put(p);
+      await move(S, p.id, -base, 'purchase_return', no);
+    }
+    it.returned = r3(it.returned + L.qty);
+    cogs += unitCost * base; total += L.qty * it.price;
+    items.push({ productId: p.id, name: p.name, unit: it.unit, factor: it.factor, qty: L.qty, price: it.price, baseQty: base, cost: r2(unitCost * base), cond: L.cond });
+  }
+  if (!items.length) throw new Error('حدد كمية المرتجع');
+  total = r2(total);
+  if (mode === 'credit' && !party) throw new Error('لا يوجد طرف لتسوية الحساب');
+  await S.invoices.put(inv);
+  const ret = { no, type: kind + '_return', date: now(), ref: inv.no, partyId: inv.partyId, partyName: inv.partyName, items, total, cogs: r2(cogs), mode };
+  ret.id = await S.invoices.add(ret);
+  if (mode === 'credit') await ledger(S, party, kind + '_return', no, -total);
+  else await cashMove(S, kind === 'sale' ? 'out' : 'in', total, kind + '_return', no);
+  return ret;
+});
+
+export const damage = d => tx(ALL, async S => {
+  const m = await costing(S), p = await S.products.get(d.productId);
+  const u = unitsOf(p)[d.unitIdx || 0], base = r3(d.qty * u.factor);
+  if (!(base > 0)) throw new Error('كمية غير صحيحة');
+  if (p.qty + 1e-9 < base) throw new Error('المخزون غير كافٍ');
+  const c = await consume(S, p, base);
+  p.qty = r3(p.qty - base); await S.products.put(p);
+  await S.damages.add({ date: now(), productId: p.id, name: p.name, qty: base, cost: r2(m === 'fifo' ? c.fifo : c.wac), reason: d.reason || 'تالف' });
+  await move(S, p.id, -base, 'damage');
+});
+
+export const adjustStock = (id, newBase) => tx(ALL, async S => {
+  const m = await costing(S), p = await S.products.get(id), diff = r3(newBase - p.qty);
+  if (diff > 0) await addLayer(S, p, diff, p.avgCost || 0, 'adjust');
+  else if (diff < 0) {
+    const c = await consume(S, p, -diff);
+    p.qty = r3(newBase); await S.products.put(p);
+    await S.damages.add({ date: now(), productId: p.id, name: p.name, qty: -diff, cost: r2(m === 'fifo' ? c.fifo : c.wac), reason: 'عجز جرد' });
+  }
+  if (diff) await move(S, id, diff, 'adjust');
+});
+
+export const payParty = (partyId, amount, note = '') => tx(ALL, async S => {
+  const p = await S.parties.get(partyId); amount = r2(amount);
+  if (!(amount > 0)) throw new Error('مبلغ غير صحيح');
+  await ledger(S, p, 'payment', '', -amount, note);
+  await cashMove(S, p.type === 'customer' ? 'in' : 'out', amount, 'payment', '', (note + ' ' + p.name).trim());
+});
+
+export const addCash = d => tx(ALL, async S => {
+  if (!(+d.amount > 0)) throw new Error('مبلغ غير صحيح');
+  await cashMove(S, d.dir, +d.amount, d.kind, '', d.note, d.cat);
+});

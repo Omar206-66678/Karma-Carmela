@@ -1,0 +1,45 @@
+// دوال مساعدة: تقريب، تنسيق، تحويل الوحدات، شرائح الأسعار
+export const r2 = n => Math.round((+n || 0) * 100) / 100;
+export const r3 = n => Math.round((+n || 0) * 1000) / 1000;
+export const r4 = n => Math.round((+n || 0) * 10000) / 10000;
+export const money = n => r2(n).toLocaleString('en-US', { maximumFractionDigits: 2 });
+export const fmtDate = d => new Date(d).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' });
+export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// وحدات الصنف: [{name:'قطعة',factor:1},{name:'كرتونة',factor:24}] — الكمية تُخزَّن دائماً بالوحدة الأساسية
+export const unitsOf = p => (p.units && p.units.length) ? p.units : [{ name: p.baseUnit || 'قطعة', factor: 1 }];
+export const baseName = p => (unitsOf(p).find(u => u.factor === 1) || unitsOf(p)[0]).name;
+
+/** تحويل تلقائي: 50 قطعة → "2 كرتونة + 2 قطعة" */
+export function formatQty(base, p) {
+  const us = [...unitsOf(p)].sort((a, b) => b.factor - a.factor);
+  let left = r3(base); const parts = [];
+  for (const u of us) {
+    if (u.factor <= 1) continue;
+    const n = Math.floor(left / u.factor + 1e-9);
+    if (n > 0) { parts.push(`${n} ${u.name}`); left = r3(left - n * u.factor); }
+  }
+  if (left > 0 || !parts.length) parts.push(`${left} ${baseName(p)}`);
+  return parts.join(' + ');
+}
+
+/** سعر الوحدة الأساسية حسب مجموعة العميل + شرائح الكمية */
+export function priceFor(p, group, baseQty) {
+  const pr = p.prices || {};
+  let price = pr[group] || pr.wholesale || pr.retail || 0;
+  if (group !== 'retail') {
+    const t = (p.tiers || []).filter(t => baseQty >= t.min).sort((a, b) => b.min - a.min)[0];
+    if (t) price = t.price;
+  }
+  return price;
+}
+
+export const GROUPS = { wholesale: 'جملة', semi: 'نصف جملة', retail: 'قطاعي' };
+export const parseUnits = (s, base) => {
+  const us = [{ name: base || 'قطعة', factor: 1 }];
+  (s || '').split(/[,،\n]/).forEach(x => { const [n, f] = x.split('=').map(y => y.trim()); if (n && +f > 1) us.push({ name: n, factor: +f }); });
+  return us;
+};
+export const unitsText = p => unitsOf(p).filter(u => u.factor !== 1).map(u => `${u.name}=${u.factor}`).join(', ');
+export const parseTiers = s => (s || '').split(/[,،\n]/).map(x => x.split('=').map(y => +y.trim())).filter(([m, pr]) => m > 0 && pr > 0).map(([min, price]) => ({ min, price }));
+export const tiersText = p => (p.tiers || []).map(t => `${t.min}=${t.price}`).join(', ');
