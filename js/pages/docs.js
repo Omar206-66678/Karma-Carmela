@@ -1,5 +1,5 @@
 import { getAll, setting } from '../db.js';
-import { esc, money, formatQty, unitsOf, priceFor, r2, r3, fmtDate } from '../core.js';
+import { esc, money, formatQty, unitsOf, priceFor, r2, r3, fmtDate, balanceLabel } from '../core.js';
 import { $, sheet, closeSheet, toast, scan, invHtml, typeName, printDoc, coInfo } from '../ui.js';
 import { createSale, createPurchase, returnDoc } from '../services.js';
 
@@ -12,7 +12,7 @@ async function doc(el, kind) {
   const [P, parties, cur] = await Promise.all([getAll('products'), getAll('parties'), setting('currency', 'ج.م')]);
   const PL = parties.filter(x => x.type === (isS ? 'customer' : 'supplier'));
   const st = { cart: [] };
-  el.innerHTML = `<div class="card"><label>${isS ? 'العميل' : 'المورد'}<select id="party"><option value="">${isS ? 'عميل نقدي' : 'مورد نقدي'}</option>${PL.map(x => `<option value="${x.id}">${esc(x.name)}${x.balance ? ` (${(isS ? x.balance > 0 : x.balance > 0) ? (isS ? 'عليه' : 'له') : ''} ${money(Math.abs(x.balance))})` : ''}</option>`).join('')}</select></label>
+  el.innerHTML = `<div class="card"><label>${isS ? 'العميل' : 'المورد'}<select id="party"><option value="">${isS ? 'عميل نقدي' : 'مورد نقدي'}</option>${PL.map(x => `<option value="${x.id}">${esc(x.name)}${x.balance ? ` (${balanceLabel(x)} ${money(Math.abs(x.balance))})` : ''}</option>`).join('')}</select></label>
     <div class="row"><input id="q" placeholder="ابحث بالاسم أو امسح الباركود" autocomplete="off"><button class="btn ic" id="sc" type="button">📷</button></div><div id="res" class="list"></div></div>
     <div id="cart"></div>
     <div class="card"><div class="row sb"><span>الإجمالي</span><b id="sub"></b></div>
@@ -52,7 +52,12 @@ async function doc(el, kind) {
     }).join('');
     totals();
   }
-  const find = q => { q = q.trim().toLowerCase(); return q ? P.filter(p => (p.barcode && p.barcode === q) || p.name.toLowerCase().includes(q)).slice(0, 8) : []; };
+  const bc = p => String(p.barcode || '').trim().toLowerCase();
+  const find = q => {
+    q = q.trim().toLowerCase(); if (!q) return [];
+    return P.filter(p => bc(p) === q || p.name.toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q) || (bc(p) && bc(p).includes(q)))
+      .sort((a, b) => (bc(b) === q) - (bc(a) === q)).slice(0, 8);
+  };
   const showRes = () => {
     const R = find($('#q', el).value);
     $('#res', el).innerHTML = R.map(p => `<div class="item" data-pid="${p.id}"><div><b>${esc(p.name)}</b><small>${esc(p.category || '')}</small></div><span class="badge ${p.qty <= (p.minStock || 0) ? 'warn' : ''}">${formatQty(p.qty, p)}</span></div>`).join('');
@@ -61,19 +66,20 @@ async function doc(el, kind) {
 
   $('#q', el).oninput = showRes;
   $('#q', el).onkeydown = e => { if (e.key === 'Enter') { const R = find($('#q', el).value); if (R[0]) pick(R[0]); else toast('لا يوجد صنف بهذا الاسم/الباركود'); } };
-  $('#sc', el).onclick = () => scan(c => { const p = P.find(x => x.barcode === c); p ? pick(p) : toast('باركود غير مسجل: ' + c); });
+  $('#sc', el).onclick = () => scan(c => { const p = P.find(x => bc(x) === String(c).trim().toLowerCase()); p ? pick(p) : toast('باركود غير مسجل: ' + c); });
   el.oninput = e => { if (e.target.id === 'disc' || e.target.id === 'paid') totals(); };
   el.onclick = async e => {
     const it = e.target.closest('[data-pid]'); if (it) return pick(prod(+it.dataset.pid));
     if (e.target.dataset.act === 'del') { st.cart.splice(+e.target.closest('.line').dataset.i, 1); return drawCart(); }
     if (e.target.id === 'save') {
+      if (st.saving) return; st.saving = true;
       try {
         const t = totals(), items = st.cart.filter(l => l.qty > 0);
         if (!items.length) throw new Error('الفاتورة فارغة');
         const d = { partyId: +$('#party', el).value || null, items: items.map(l => ({ productId: l.productId, unitIdx: l.unitIdx, qty: l.qty, price: l.price })), discount: t.disc, paid: t.paid, note: $('#note', el).value };
         const inv = await (isS ? createSale : createPurchase)(d);
         toast('تم الحفظ ✓'); await doc(el, kind); showInvoice(inv);
-      } catch (err) { toast(err.message); }
+      } catch (err) { toast(err.message); st.saving = false; }
     }
   };
   el.onchange = e => {
