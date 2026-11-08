@@ -1,11 +1,11 @@
 import { getAll, put, tx } from '../db.js';
-import { esc, money, fmtDate, GROUPS } from '../core.js';
+import { esc, money, fmtDate, GROUPS, balanceLabel } from '../core.js';
 import { sheet, closeSheet, toast, $, printDoc, coInfo } from '../ui.js';
 import { payParty } from '../services.js';
 export const title = 'العملاء والموردون';
 const TY = { sale: 'فاتورة بيع', purchase: 'فاتورة شراء', payment: 'دفعة', sale_return: 'مرتجع مبيعات', purchase_return: 'مرتجع مشتريات' };
 const refresh = () => render($('#view'));
-const lbl = (p, bal = p.balance || 0) => p.type === 'customer' ? (bal >= 0 ? 'عليه' : 'له') : (bal >= 0 ? 'له' : 'عليه');
+const lbl = balanceLabel;
 
 export async function render(el) {
   let tab = sessionStorage.getItem('ptab') || 'customer';
