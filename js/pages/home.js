@@ -1,6 +1,7 @@
 import { summary, overview, range } from '../reports.js';
 import { money, esc, formatQty } from '../core.js';
 import { setting } from '../db.js';
+import { $ } from '../ui.js';
 export const title = 'الرئيسية';
 export async function render(el) {
   const cur = await setting('currency', 'ج.م');
