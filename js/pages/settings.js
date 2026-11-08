@@ -1,4 +1,4 @@
-import { setting, setSetting, exportAll, importAll, resetAll } from '../db.js';
+import { setting, setSetting, exportAll, importAll, resetAll, validateBackup } from '../db.js';
 import { esc } from '../core.js';
 import { $, toast } from '../ui.js';
 import { saveProduct } from '../services.js';
@@ -25,7 +25,15 @@ export async function render(el) {
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(await exportAll())], { type: 'application/json' }));
     a.download = `wms-backup-${new Date().toISOString().slice(0, 10)}.json`; a.click();
   };
-  $('#im', el).onchange = async e => { try { if (!confirm('سيتم استبدال كل البيانات الحالية. متابعة؟')) return; await importAll(JSON.parse(await e.target.files[0].text())); toast('تم الاسترجاع ✓'); location.hash = '#/'; } catch { toast('ملف غير صالح'); } };
+  $('#im', el).onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try {
+      let data; try { data = JSON.parse(await f.text()); } catch { throw new Error('ملف غير صالح: ليس بصيغة JSON'); }
+      validateBackup(data);
+      if (!confirm('سيتم استبدال كل البيانات الحالية. متابعة؟')) return;
+      await importAll(data); toast('تم الاسترجاع ✓'); location.hash = '#/'; location.reload();
+    } catch (err) { toast(err.message || 'ملف غير صالح'); } finally { e.target.value = ''; }
+  };
   $('#rs', el).onclick = async () => { if (confirm('حذف كل البيانات نهائياً؟') && confirm('تأكيد أخير: لا يمكن التراجع!')) { await resetAll(); toast('تم المسح'); location.hash = '#/'; } };
   $('#demo', el).onclick = async () => {
     const mk = (name, cat, bc, big, f, cost, wh, rt, open) => saveProduct({ name, category: cat, barcode: bc, baseUnit: 'قطعة', units: [{ name: 'قطعة', factor: 1 }, { name: big, factor: f }], minStock: f * 2, tiers: [], prices: { cost, wholesale: wh, semi: +(wh * 1.05).toFixed(2), retail: rt } }, open, cost);
