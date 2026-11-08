@@ -49,5 +49,23 @@ export const del = (n, k) => tx([n], S => S[n].del(k));
 export const setting = async (k, d) => { const r = await get('settings', k); return r ? r.value : d; };
 export const setSetting = (k, v) => put('settings', { key: k, value: v });
 export async function exportAll() { const o = {}; for (const n of ALL) o[n] = await getAll(n); return o; }
-export const importAll = o => tx(ALL, async S => { for (const n of ALL) { await S[n].clear(); for (const v of o[n] || []) await S[n].put(v); } });
+/** التحقق من شكل النسخة الاحتياطية قبل أي مسح */
+export function validateBackup(o) {
+  if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('ملف النسخة الاحتياطية غير صالح');
+  let found = false;
+  for (const n of ALL) {
+    const a = o[n];
+    if (a === undefined) continue;
+    if (!Array.isArray(a)) throw new Error('بيانات تالفة في: ' + n);
+    found = true;
+    for (const v of a) {
+      if (!v || typeof v !== 'object' || (n === 'settings' ? v.key === undefined : v.id === undefined)) throw new Error('بيانات تالفة في: ' + n);
+    }
+  }
+  if (!found) throw new Error('الملف لا يحتوي على بيانات المخزن');
+}
+export const importAll = async o => {
+  validateBackup(o);
+  return tx(ALL, async S => { for (const n of ALL) { await S[n].clear(); for (const v of o[n] || []) await S[n].put(v); } });
+};
 export const resetAll = () => tx(ALL, async S => { for (const n of ALL) await S[n].clear(); });
