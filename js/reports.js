@@ -31,7 +31,8 @@ export async function summary(from, to) {
     if (!sg) continue;
     for (const it of i.items) {
       const o = st[it.productId] || (st[it.productId] = { id: it.productId, name: it.name, qty: 0, rev: 0, profit: 0 });
-      o.qty += sg * it.baseQty; o.rev += sg * it.qty * it.price; o.profit += sg * (it.qty * it.price - it.cost);
+      const net = it.qty * it.price - (it.disc || 0);
+      o.qty += sg * it.baseQty; o.rev += sg * net; o.profit += sg * (net - it.cost);
     }
   }
   return { sales, sret, cogs, gross, exp, dmg: dm, net, count: S.length, top: Object.values(st) };
