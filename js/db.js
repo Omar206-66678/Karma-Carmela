@@ -1,9 +1,8 @@
 // طبقة التخزين المحلي: IndexedDB (تعمل بدون إنترنت) + معاملات ذرية (ACID)
-const NAME = 'wms', VER = 1;
+const NAME = 'makhzany-pro', VER = 1;
 const STORES = {
-  products: ['barcode'], batches: ['productId'], parties: ['type'],
-  invoices: ['type', 'date'], ledger: ['partyId'], cash: ['date'],
-  moves: ['productId'], damages: ['date']
+  products: ['barcode', 'category'], categories: ['name'], batches: ['productId'], parties: ['type'],
+  invoices: ['type', 'date', 'partyId'], ledger: ['partyId'], cash: ['date'], moves: ['productId'], damages: ['date']
 };
 export const ALL = [...Object.keys(STORES), 'settings'];
 let dbp;
@@ -48,7 +47,12 @@ export const put = (n, v) => { if (!v.id && n !== 'settings') delete v.id; retur
 export const del = (n, k) => tx([n], S => S[n].del(k));
 export const setting = async (k, d) => { const r = await get('settings', k); return r ? r.value : d; };
 export const setSetting = (k, v) => put('settings', { key: k, value: v });
-export async function exportAll() { const o = {}; for (const n of ALL) o[n] = await getAll(n); return o; }
+
+export async function exportAll() {
+  const o = { __meta: { app: 'makhzany-pro', version: 1, date: new Date().toISOString() } };
+  for (const n of ALL) o[n] = await getAll(n);
+  return o;
+}
 /** التحقق من شكل النسخة الاحتياطية قبل أي مسح */
 export function validateBackup(o) {
   if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('ملف النسخة الاحتياطية غير صالح');
