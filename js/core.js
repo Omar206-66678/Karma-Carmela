@@ -43,3 +43,6 @@ export const parseUnits = (s, base) => {
 export const unitsText = p => unitsOf(p).filter(u => u.factor !== 1).map(u => `${u.name}=${u.factor}`).join(', ');
 export const parseTiers = s => (s || '').split(/[,،\n]/).map(x => x.split('=').map(y => +y.trim())).filter(([m, pr]) => m > 0 && pr > 0).map(([min, price]) => ({ min, price }));
 export const tiersText = p => (p.tiers || []).map(t => `${t.min}=${t.price}`).join(', ');
+
+/** وصف رصيد الطرف: العميل الموجب = عليه، المورد الموجب = له، والسالب عكس ذلك */
+export const balanceLabel = (p, bal = p.balance || 0) => p.type === 'customer' ? (bal >= 0 ? 'عليه' : 'له') : (bal >= 0 ? 'له' : 'عليه');
