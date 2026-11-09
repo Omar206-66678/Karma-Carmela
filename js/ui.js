@@ -99,9 +99,23 @@ export async function coInfo() {
   const [name, tag, phone, address, cur, cashier, footer] = await Promise.all([g('company', BRAND), g('tagline', 'لإدارة وتجارة السلع الغذائية'), g('phone', ''), g('address', ''), g('currency', 'ج.م'), g('cashier', ''), g('footer', 'شكراً لتعاملكم معنا')]);
   return { name, tag, phone, address, cur, cashier, footer };
 }
+/** تنزيل ملف: يفتح نافذة فيها زر تنزيل حقيقي (يعمل على كل الموبايلات) + مشاركة + نسخ كخيار احتياطي */
 export function download(name, text, mime = 'text/csv;charset=utf-8') {
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: mime })); a.download = name; document.body.append(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  const blob = new Blob([text], { type: mime }), url = URL.createObjectURL(blob);
+  const file = typeof File === 'function' ? new File([blob], name, { type: mime.split(';')[0] }) : null;
+  const canShare = !!(file && navigator.canShare && navigator.canShare({ files: [file] }));
+  const kb = Math.max(1, Math.round(blob.size / 1024));
+  sheet(`${sheetHead('الملف جاهز', esc(name))}<p class="muted">الحجم: ${kb} KB</p>
+    <a class="btn full lg" id="dl" href="${url}" download="${esc(name)}">${ic('download', 20)} تنزيل الملف</a>
+    ${canShare ? `<button class="btn out full" id="sh">${ic('upload', 19)} مشاركة / حفظ في الملفات</button>` : ''}
+    <button class="btn out full" id="cpy">${ic('copy', 19)} نسخ المحتوى</button>
+    <small class="muted">إن لم يبدأ التنزيل: اضغط «مشاركة» أو «نسخ المحتوى» والصقه في ملف نصي.</small>`,
+    box => {
+      $('#dl', box).onclick = () => toast('بدأ التنزيل — راجع مجلد التنزيلات');
+      const sh = $('#sh', box); if (sh) sh.onclick = () => navigator.share({ files: [file], title: name }).catch(() => { });
+      $('#cpy', box).onclick = () => copyText(text);
+    });
+  setTimeout(() => URL.revokeObjectURL(url), 300000);
 }
 export async function copyText(t) {
   try { await navigator.clipboard.writeText(t); toast('تم النسخ'); }
