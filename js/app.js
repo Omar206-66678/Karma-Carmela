@@ -10,8 +10,9 @@ import * as parties from './pages/parties.js';
 import * as cash from './pages/cash.js';
 import * as reports from './pages/reports.js';
 import * as settings from './pages/settings.js';
+import * as more from './pages/more.js';
 
-const routes = { '': dashboard, pos: docs.pos, purchases: docs.purchases, 'purchase-new': docs.purchaseNew, products, categories, suppliers: parties.suppliers, customers: parties.customers, party: parties.party, invoices, cash, reports, settings };
+const routes = { '': dashboard, pos: docs.pos, purchases: docs.purchases, 'purchase-new': docs.purchaseNew, products, categories, suppliers: parties.suppliers, customers: parties.customers, party: parties.party, invoices, cash, reports, settings, more };
 
 // محتويات القائمة الجانبية (الثلاث شروط) — مقسمة حسب وظائف التطبيق
 const MENU = [
@@ -24,6 +25,7 @@ const MENU = [
 ];
 const TABS = [['', 'home', 'الرئيسية'], ['products', 'package', 'الأصناف'], ['pos', 'cart', 'الكاشير'], ['purchases', 'truck', 'الوارد']];
 const GROUP = { 'purchase-new': 'purchases', party: 'customers' };
+const IN_MORE = ['more', 'customers', 'suppliers', 'party', 'cash', 'reports', 'settings'];
 
 let cur = '';
 function shell() {
@@ -40,7 +42,7 @@ function shell() {
     ${TABS.slice(0, 2).map(([k, i, l]) => `<a href="#/${k}" data-k="${k}">${ic(i, 22)}<span>${l}</span><i class="pip"></i></a>`).join('')}
     <a class="mid" href="#/pos" data-k="pos" aria-label="الكاشير"><span class="circ">${ic('cart', 28)}</span><span class="lb">الكاشير</span></a>
     <a href="#/purchases" data-k="purchases">${ic('truck', 22)}<span>الوارد</span><i class="pip"></i></a>
-    <button class="tb" id="more">${ic('menu', 22)}<span>المزيد</span><i class="pip"></i></button>
+    <a href="#/more" id="more" data-k="more">${ic('menu', 22)}<span>المزيد</span><i class="pip"></i></a>
   </div></nav>
   <div id="drawer"><div class="dw-bg" data-dw></div><aside class="dw-panel" role="dialog" aria-label="القائمة">
     <div class="dw-hd">${logo(46)}<div><b>${BRAND}</b><small>نظام المخزن والمبيعات</small></div><button class="ibtn" data-dw aria-label="إغلاق">${ic('x', 20)}</button></div>
@@ -49,7 +51,7 @@ function shell() {
   </aside></div>`;
   applyTheme(document.documentElement.dataset.theme || 'light');
   $('#theme').onclick = toggleTheme;
-  $('#menu').onclick = $('#more').onclick = openDrawer;
+  $('#menu').onclick = openDrawer;
   $('#drawer').onclick = e => {
     if (e.target.closest('[data-dw]')) return closeDrawer();
     if (e.target.closest('a.dw-it')) return closeDrawer();
@@ -82,7 +84,7 @@ async function nav() {
   cur = routes[name] ? name : ''; const r = routes[cur];
   const grp = GROUP[cur] || cur;
   $$('#tabs [data-k],#drawer a.dw-it').forEach(a => a.classList.toggle('on', a.dataset.k === grp));
-  $('#more').classList.toggle('on', !TABS.some(t => t[0] === grp));
+  $('#more').classList.toggle('on', IN_MORE.includes(cur));
   document.title = `${BRAND} — ${r.title}`;
   const v = $('#view'); v.onclick = v.onchange = v.oninput = v.onkeydown = null;
   try { await r.render(v, arg); } catch (e) { console.error(e); v.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
