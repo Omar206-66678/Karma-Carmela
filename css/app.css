@@ -1,4 +1,4 @@
-/* ===== كارمة كاميلا — نظام التصميم ===== */
+/* ===== كارمه كارميلا — نظام التصميم ===== */
 :root{
   --bg:#F3F6F2;--surface:#fff;--surface2:#EDF2EE;--line:#E1E8E2;--ink:#10201A;--ink2:#2B3D34;--muted:#667A70;
   --brand:#0F5132;--green:#0F5132;--green2:#16734A;--emerald:#1FA971;
@@ -269,3 +269,17 @@ button.pc.off{opacity:.5}
   body.thermal .paper .sig{display:none}
 }
 @media(max-width:380px){.hero .big{font-size:32px}.bn small{display:none}}
+
+/* ===== صفحة المزيد ===== */
+.mgrid{display:grid;gap:12px;grid-template-columns:1fr;margin-bottom:14px}
+@media(min-width:700px){.mgrid{grid-template-columns:1fr 1fr}}
+.mcard{--tint:var(--g-soft);display:flex;flex-direction:column;gap:4px;padding:16px;border-radius:22px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--sh1);text-decoration:none;color:inherit;position:relative;overflow:hidden;transition:transform .12s,border-color .15s}
+.mcard.b{--tint:var(--b-soft)}.mcard.a{--tint:var(--a-soft)}.mcard.p{--tint:var(--p-soft)}.mcard.t{--tint:var(--t-soft)}.mcard.o{--tint:var(--o-soft)}.mcard.r{--tint:var(--r-soft)}
+.mcard::after{content:"";position:absolute;inset-inline-end:-34px;bottom:-34px;width:120px;height:120px;border-radius:50%;background:var(--tint);opacity:.6}
+.mcard>*{position:relative;z-index:1}
+.mcard:hover{border-color:var(--emerald)}.mcard:active{transform:scale(.985)}
+.mc-top{display:flex;justify-content:space-between;align-items:center}
+.mcard h3{font-size:17px;font-weight:900;margin-top:8px}.mcard p{font-size:13px;color:var(--muted);line-height:1.5}
+.mc-ft{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.mc-ft b{font-weight:900;font-size:14.5px}
+.ch{color:var(--muted)}
