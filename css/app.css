@@ -1,5 +1,5 @@
 /* ==========================================
-   WPS & Wholesale Management - Modern Theme
+   WPS & Wholesale Management - Modern Theme v3
    ========================================== */
 
 :root {
@@ -44,7 +44,7 @@ body {
   color: var(--text-main);
   direction: rtl;
   min-height: 100vh;
-  padding-bottom: 90px; /* مسافة لشريط التنقل السفلي */
+  padding-bottom: 90px;
   font-size: 14px;
   line-height: 1.5;
 }
@@ -68,20 +68,49 @@ body {
   font-weight: 700;
 }
 
-#top .badge {
+#top .badge, header .badge {
   background: rgba(255, 255, 255, 0.2);
-  padding: 4px 10px;
+  padding: 4px 12px;
   border-radius: var(--radius-full);
   font-size: 12px;
   font-weight: 500;
   backdrop-filter: blur(4px);
+  color: #fff;
 }
 
-/* --- المحتوى الرئيسي (#view) --- */
+/* --- المحتوى الرئيسي (#view) ولوحة التحكم --- */
 #view {
   padding: 16px;
   max-width: 480px;
   margin: 0 auto;
+}
+
+/* تحويل عناصر لوحة التحكم المولدَّة برمجياً إلى شبكة بطاقات عصرية (Grid) */
+#view > div, #view .card, #view .box {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-md);
+}
+
+/* تنسيق أزرار الإجراءات السريعة في الصفحة الرئيسية (بيع جديد / وارد جديد) */
+#view button, #view .btn, #view a.btn {
+  display: inline-block;
+  background: linear-gradient(135deg, #0F766E, #14b8a6);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3);
+  text-align: center;
+  text-decoration: none;
+  margin: 4px 0;
+  width: 100%;
 }
 
 /* --- شريط التنقل السفلي (#tabs) --- */
@@ -124,18 +153,7 @@ body {
   background: var(--accent-glow);
 }
 
-/* --- البطاقات والعناصر داخل الصفحة --- */
-.card, .modern-card, .box, div[class*="card"], .stat-box {
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  margin-bottom: 12px;
-  box-shadow: var(--shadow-md);
-  transition: var(--transition);
-}
-
-/* --- الحقول والنماذج --- */
+/* --- الحقول والنماذج العامة --- */
 input, select, textarea {
   width: 100%;
   background-color: var(--surface);
@@ -162,27 +180,7 @@ label {
   font-weight: 500;
 }
 
-/* --- الأزرار --- */
-button, .btn, input[type="submit"] {
-  background: linear-gradient(135deg, #0F766E, #14b8a6);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 12px 20px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3);
-  transition: var(--transition);
-  width: 100%;
-  text-align: center;
-}
-
-button:active, .btn:active {
-  transform: translateY(1px);
-}
-
-/* --- النوافذ المنبثقة (#sheet) --- */
+/* النوافذ والتنبيهات */
 #sheet {
   position: fixed;
   inset: 0;
@@ -198,7 +196,6 @@ button:active, .btn:active {
   display: flex;
 }
 
-/* --- التنبيهات المؤقتة (#toast) --- */
 #toast {
   position: fixed;
   bottom: 100px;
