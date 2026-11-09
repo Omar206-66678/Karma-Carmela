@@ -6,12 +6,31 @@
 <meta name="theme-color" content="#0F766E">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg">
-<title>مخزن الجملة</title>
+<title>مخزن الجملة - كرامة كارميلا</title>
 <link rel="stylesheet" href="css/app.css">
 <style id="pageStyle"></style>
 </head>
 <body>
-<header id="top"><h1 id="title"></h1><span id="net" class="badge"></span></header>
+<header id="top">
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <!-- لوجو SVG احترافي لكرامة كارميلا -->
+    <div style="width: 38px; height: 38px; background: linear-gradient(135deg, #0d9488, #14b8a6); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(13,148,136,0.4); flex-shrink: 0;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+      </svg>
+    </div>
+    <div>
+      <span style="font-size: 10px; color: rgba(255,255,255,0.7); font-weight: 600; letter-spacing: 0.5px; display: block; line-height: 1.1;">كرامة كارميلا</span>
+      <h1 id="title" style="font-size: 16px; font-weight: 700; color: #fff; margin-top: 1px;">الرئيسية</h1>
+    </div>
+  </div>
+  <div style="display: flex; align-items: center; gap: 8px;">
+    <span id="net" class="badge"></span>
+    <button onclick="document.body.classList.toggle('light-theme')" title="تبديل المظهر" style="background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.2); width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 15px; transition: all 0.2s ease;">✨</button>
+  </div>
+</header>
 <main id="view"></main>
 <nav id="tabs">
   <a href="#/" data-k=",">🏠<span>الرئيسية</span></a>
