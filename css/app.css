@@ -1,46 +1,45 @@
 /* ==========================================
-   WPS & Wholesale Management - Ultra Modern Theme v4
+   WPS & Wholesale Management - Academy Design System
    ========================================== */
 
 :root {
-  --bg-primary: #090d16;
-  --bg-secondary: #131c2e;
-  --bg-card: #1b263b;
-  --bg-card-hover: #22304a;
-  --surface: #0e1626;
+  --bg-app: #070b14;
+  --bg-surface: #0f172a;
+  --bg-card: #131c31;
+  --bg-card-hover: #1a2642;
   
-  --accent-primary: #0d9488; /* Teal العصري الجذاب */
-  --accent-primary-hover: #14b8a6;
-  --accent-glow: rgba(13, 148, 136, 0.25);
+  --primary: #0d9488;
+  --primary-hover: #14b8a6;
+  --primary-light: rgba(13, 148, 136, 0.15);
   
-  --text-main: #f1f5f9;
+  --text-main: #f8fafc;
   --text-muted: #94a3b8;
   --text-dim: #64748b;
   
   --border-color: rgba(255, 255, 255, 0.08);
   --border-focus: #14b8a6;
   
-  --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
-  --shadow-modal: 0 -10px 40px rgba(0, 0, 0, 0.8);
+  --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+  --shadow-glow: 0 0 20px rgba(13, 148, 136, 0.25);
   
   --radius-sm: 10px;
   --radius-md: 16px;
   --radius-lg: 24px;
   --radius-full: 9999px;
   
-  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background-color: var(--bg-primary);
+  background-color: var(--bg-app);
   color: var(--text-main);
   direction: rtl;
   min-height: 100vh;
@@ -49,7 +48,7 @@ body {
   line-height: 1.6;
 }
 
-/* --- الهيدر العلوي (#top) --- */
+/* --- الهيدر العلوي الفاخر (#top) --- */
 #top {
   background: linear-gradient(135deg, #0f766e, #0d9488);
   color: #fff;
@@ -61,12 +60,13 @@ body {
   position: sticky;
   top: 0;
   z-index: 800;
+  backdrop-filter: blur(10px);
 }
 
 #top h1 {
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 700;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
 }
 
 #top .badge, header .badge {
@@ -79,24 +79,25 @@ body {
   color: #fff;
 }
 
-/* --- المحتوى الرئيسي (#view) --- */
+/* --- الحاوية الرئيسية (#view) --- */
 #view {
   padding: 16px;
   max-width: 480px;
   margin: 0 auto;
 }
 
-/* --- تحويل أي بطاقة أو قسم تلقائياً إلى تصميم عصري فاخر --- */
+/* --- البطاقات والأقسام العصرية --- */
 #view > div, #view .card, #view .box, #view form {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: 18px;
   margin-bottom: 14px;
   box-shadow: var(--shadow-card);
+  transition: var(--transition);
 }
 
-/* --- شبكة الإحصائيات (الصفحة الرئيسية) --- */
+/* --- شبكة الإحصائيات (Grid & Stats) --- */
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -114,10 +115,12 @@ body {
   flex-direction: column;
   justify-content: space-between;
   transition: var(--transition);
+  position: relative;
+  overflow: hidden;
 }
 
 .stat:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 
 .stat small {
@@ -139,7 +142,7 @@ body {
   color: var(--text-dim);
 }
 
-/* تلوين الحواف الجانبية للإحصائيات بطريقة أنيقة */
+/* مؤشرات الحالة الملونة (بخطوط جانبية ناعمة) */
 .stat.g { border-right: 4px solid #10b981; }
 .stat.p { border-right: 4px solid #0ea5e9; }
 .stat.o { border-right: 4px solid #f59e0b; }
@@ -148,7 +151,7 @@ body {
 /* --- الحقول والنماذج (Inputs & Forms) --- */
 input, select, textarea {
   width: 100%;
-  background-color: var(--surface);
+  background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   padding: 14px 16px;
@@ -162,8 +165,8 @@ input, select, textarea {
 
 input:focus, select:focus, textarea:focus {
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 4px var(--accent-glow);
-  background-color: var(--bg-secondary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+  background-color: var(--bg-card);
 }
 
 label {
@@ -174,7 +177,7 @@ label {
   margin-bottom: 2px;
 }
 
-/* --- الأزرار العصرية --- */
+/* --- الأزرار الموحدة (Buttons) --- */
 button, .btn, input[type="submit"], #view a.btn {
   display: inline-block;
   background: linear-gradient(135deg, #0d9488, #14b8a6);
@@ -185,7 +188,7 @@ button, .btn, input[type="submit"], #view a.btn {
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(13, 148, 136, 0.35);
+  box-shadow: 0 4px 15px rgba(13, 148, 136, 0.3);
   text-align: center;
   text-decoration: none;
   transition: var(--transition);
@@ -199,7 +202,7 @@ button:active, .btn:active, #view a.btn:active {
 }
 
 .btn.alt {
-  background: var(--bg-secondary);
+  background: var(--bg-surface);
   border: 1px solid var(--border-color);
   color: var(--text-main);
   box-shadow: none;
@@ -209,14 +212,14 @@ button:active, .btn:active, #view a.btn:active {
   background: var(--bg-card-hover);
 }
 
-/* --- تنسيق صفحة "المزيد" والقوائم والروابط العادية تلقائياً لتصبح كبطاقات --- */
+/* --- صفحة "المزيد" والقوائم الداخلية --- */
 #view a:not(.btn) {
   display: block;
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-surface);
   color: var(--text-main);
   text-decoration: none;
-  padding: 14px 18px;
-  margin-bottom: 8px;
+  padding: 15px 18px;
+  margin-bottom: 10px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
   font-weight: 500;
@@ -225,7 +228,7 @@ button:active, .btn:active, #view a.btn:active {
 
 #view a:not(.btn):hover {
   background-color: var(--bg-card-hover);
-  border-color: var(--accent-primary);
+  border-color: var(--primary);
   transform: translateX(-4px);
 }
 
@@ -237,7 +240,7 @@ button:active, .btn:active, #view a.btn:active {
 }
 
 .item {
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   padding: 14px 18px;
@@ -268,12 +271,12 @@ h3 {
   color: var(--text-muted);
   padding: 20px;
   font-size: 14px;
-  background: var(--bg-secondary);
+  background: var(--bg-surface);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
 }
 
-/* --- شريط التنقل السفلي (#tabs) --- */
+/* --- شريط التنقل السفلي الزجاجي (#tabs) --- */
 #tabs {
   position: fixed;
   bottom: 0;
@@ -281,7 +284,7 @@ h3 {
   right: 0;
   max-width: 480px;
   margin: 0 auto;
-  background: rgba(19, 28, 46, 0.95);
+  background: rgba(15, 23, 42, 0.9);
   backdrop-filter: blur(20px);
   border-top: 1px solid var(--border-color);
   display: flex;
@@ -310,10 +313,10 @@ h3 {
 
 #tabs a:hover, #tabs a.on {
   color: #14b8a6;
-  background: var(--accent-glow);
+  background: var(--primary-light);
 }
 
-/* --- النوافذ المنبثقة (#sheet) --- */
+/* --- النوافذ المنبثقة السفلية (#sheet) --- */
 #sheet {
   position: fixed;
   inset: 0;
@@ -336,13 +339,13 @@ h3 {
 
 #sheet .sheet-box {
   position: relative;
-  background: var(--bg-secondary);
+  background: var(--bg-card);
   width: 100%;
   max-width: 480px;
   border-top-left-radius: var(--radius-lg);
   border-top-right-radius: var(--radius-lg);
   padding: 28px 20px 40px 20px;
-  box-shadow: var(--shadow-modal);
+  box-shadow: 0 -20px 40px rgba(0, 0, 0, 0.8);
   border-top: 1px solid var(--border-color);
   max-height: 85vh;
   overflow-y: auto;
@@ -352,7 +355,7 @@ h3 {
   position: absolute;
   top: 18px;
   left: 18px;
-  background: var(--surface);
+  background: var(--bg-surface);
   border: 1px solid var(--border-color);
   color: var(--text-muted);
   width: 36px;
@@ -371,6 +374,7 @@ h3 {
   border-color: #ef4444;
 }
 
+/* --- التنبيهات المؤقتة (Toast) --- */
 #toast {
   position: fixed;
   bottom: 110px;
