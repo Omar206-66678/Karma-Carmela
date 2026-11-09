@@ -344,47 +344,7 @@ h3 {
   background: var(--primary-light);
 }
 
-/* --- كاميرا الباركود (Scanner Overlay) --- */
-.scanner {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  background: rgba(0, 0, 0, 0.92);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  backdrop-filter: blur(8px);
-}
-
-.scanner video {
-  width: 100%;
-  max-width: 440px;
-  height: auto;
-  border-radius: var(--radius-md);
-  object-fit: cover;
-  border: 2px solid var(--primary);
-  box-shadow: var(--shadow-card);
-  max-height: 65vh;
-}
-
-.scanner button {
-  margin-top: 20px;
-  width: 100%;
-  max-width: 440px;
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 14px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
-}
-
-/* --- النوافذ المنبثقة السفلية (#sheet) --- */
+/* --- النوافذ المنبثقة السفلية (#sheet) وداخله عناصر القراءة/الكاميرا --- */
 #sheet {
   position: fixed;
   inset: 0;
@@ -440,6 +400,14 @@ h3 {
   background: #ef4444;
   color: #fff;
   border-color: #ef4444;
+}
+
+/* تنسيق فيديو الباركود داخل الـ Sheet أو النافذة المخصصة إن وجدت */
+.scanner video {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  border: 1px solid var(--border-color);
 }
 
 /* --- التنبيهات المؤقتة (Toast) --- */
