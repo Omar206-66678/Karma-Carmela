@@ -1,160 +1,85 @@
-import { setting, setSetting, exportAll, importAll, resetAll, validateBackup } from '../db.js';
-import { esc } from '../core.js';
-import { $, toast } from '../ui.js';
-import { saveProduct } from '../services.js';
-import { put } from '../db.js';
+import { getAll, get, tx } from '../db.js';
+import { esc, money, fmtDate, fmtDay, GROUPS, balanceLabel, METHODS, r2 } from '../core.js';
+import { $, ic, logo, sheet, closeSheet, sheetHead, toast, head, coInfo, printDoc, typeName } from '../ui.js';
+import { saveParty, deleteParty, payParty } from '../services.js';
+import { showInvoice } from './invoices.js';
 
-export const more = {
-  title: 'المزيد',
-  render(el) {
-    el.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        <a href="#/invoices" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color); text-decoration: none; color: var(--text-main); box-shadow: var(--shadow-card); transition: var(--transition);">
-          <div style="display: flex; align-items: center; gap: 14px;">
-            <span style="font-size: 22px; background: var(--primary-light); width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">🧾</span>
-            <div>
-              <div style="font-weight: 600; font-size: 15px;">الفواتير والمرتجعات</div>
-              <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">استعراض ومتابعة فواتير البيع والشراء</div>
-            </div>
-          </div>
-          <span style="color: var(--text-muted); font-size: 14px;">◀</span>
-        </a>
+const TY = { sale: 'فاتورة بيع', purchase: 'فاتورة شراء', payment: 'دفعة', sale_return: 'مرتجع مبيعات', purchase_return: 'مرتجع مشتريات', opening: 'رصيد افتتاحي' };
 
-        <a href="#/parties" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color); text-decoration: none; color: var(--text-main); box-shadow: var(--shadow-card); transition: var(--transition);">
-          <div style="display: flex; align-items: center; gap: 14px;">
-            <span style="font-size: 22px; background: var(--primary-light); width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">👥</span>
-            <div>
-              <div style="font-weight: 600; font-size: 15px;">العملاء والموردون</div>
-              <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">إدارة حسابات وأرصدة الأطراف</div>
-            </div>
-          </div>
-          <span style="color: var(--text-muted); font-size: 14px;">◀</span>
-        </a>
+function partyForm(p, type, done) {
+  const n = !p; p = p || { type, balance: 0 }; const isC = p.type === 'customer';
+  sheet(`${sheetHead((n ? 'إضافة ' : 'تعديل ') + (isC ? 'عميل' : 'مورد'))}
+    <label>الاسم<input id="n" value="${esc(p.name || '')}"></label><label>الهاتف<input id="t" inputmode="tel" dir="ltr" value="${esc(p.phone || '')}"></label><label>العنوان<input id="a" value="${esc(p.address || '')}"></label>
+    ${isC ? `<div class="fieldgrid"><label>مجموعة الأسعار<select id="g">${Object.entries(GROUPS).map(([k, x]) => `<option value="${k}" ${p.group === k ? 'selected' : ''}>${x}</option>`).join('')}</select></label><label>حد الائتمان (0 = بدون)<input id="c" type="number" inputmode="decimal" value="${p.creditLimit || ''}"></label></div>` : ''}
+    ${n ? `<label>${isC ? 'دين افتتاحي (عليه)' : 'رصيد افتتاحي (له)'}<input id="o" type="number" step="any" inputmode="decimal" placeholder="0"></label>` : ''}
+    <button class="btn full lg" id="go">${ic('save', 20)} حفظ</button>`,
+    b => $('#go', b).onclick = async () => {
+      try {
+        if (!$('#n', b).value.trim()) throw new Error('اكتب الاسم');
+        await saveParty({ ...p, name: $('#n', b).value.trim(), phone: $('#t', b).value.trim(), address: $('#a', b).value.trim(), group: isC ? $('#g', b).value : undefined, creditLimit: isC ? +$('#c', b).value || 0 : 0 }, n ? +$('#o', b).value || 0 : 0);
+        toast('تم الحفظ'); closeSheet(); done();
+      } catch (e) { toast(e.message, 'err'); }
+    });
+}
 
-        <a href="#/cash" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color); text-decoration: none; color: var(--text-main); box-shadow: var(--shadow-card); transition: var(--transition);">
-          <div style="display: flex; align-items: center; gap: 14px;">
-            <span style="font-size: 22px; background: var(--primary-light); width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">💰</span>
-            <div>
-              <div style="font-weight: 600; font-size: 15px;">الخزنة والمصروفات</div>
-              <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">حركات النقدية، الوارد، والمصروفات</div>
-            </div>
-          </div>
-          <span style="color: var(--text-muted); font-size: 14px;">◀</span>
-        </a>
-
-        <a href="#/reports" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color); text-decoration: none; color: var(--text-main); box-shadow: var(--shadow-card); transition: var(--transition);">
-          <div style="display: flex; align-items: center; gap: 14px;">
-            <span style="font-size: 22px; background: var(--primary-light); width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">📊</span>
-            <div>
-              <div style="font-weight: 600; font-size: 15px;">التقارير وصافي الربح</div>
-              <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">تقارير الأداء المالي والمخزون</div>
-            </div>
-          </div>
-          <span style="color: var(--text-muted); font-size: 14px;">◀</span>
-        </a>
-
-        <a href="#/settings" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color); text-decoration: none; color: var(--text-main); box-shadow: var(--shadow-card); transition: var(--transition);">
-          <div style="display: flex; align-items: center; gap: 14px;">
-            <span style="font-size: 22px; background: var(--primary-light); width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">⚙️</span>
-            <div>
-              <div style="font-weight: 600; font-size: 15px;">الإعدادات والنسخ الاحتياطي</div>
-              <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">إعدادات المنشأة والبيانات</div>
-            </div>
-          </div>
-          <span style="color: var(--text-muted); font-size: 14px;">◀</span>
-        </a>
-      </div>
-    `;
-  }
-};
-
-export const title = 'الإعدادات';
-export async function render(el) {
-  const g = (k, d) => setting(k, d);
-  const [co, ph, ad, cu, cs] = await Promise.all([g('company', 'مخزن الجملة'), g('phone', ''), g('address', ''), g('currency', 'ج.م'), g('costing', 'wac')]);
-  
-  el.innerHTML = `
-    <div class="card">
-      <h3 style="margin-bottom: 14px; font-size: 16px; color: var(--text-main);">🏢 بيانات المنشأة والنظام</h3>
-      <label>اسم المنشأة<input id="co" value="${esc(co)}"></label>
-      <label>الهاتف<input id="ph" value="${esc(ph)}"></label>
-      <label>العنوان<input id="ad" value="${esc(ad)}"></label>
-      <label>العملة<input id="cu" value="${esc(cu)}"></label>
-      <label>طريقة حساب التكلفة
-        <select id="cs">
-          <option value="wac" ${cs === 'wac' ? 'selected' : ''}>المتوسط المرجح (Weighted Average)</option>
-          <option value="fifo" ${cs === 'fifo' ? 'selected' : ''}>الأول دخولاً أول خروجاً (FIFO) — حسب الشحنة</option>
-        </select>
-      </label>
-      <button class="btn full" id="sv">حفظ الإعدادات</button>
-    </div>
-
-    <div class="card">
-      <h3 style="margin-bottom: 6px; font-size: 16px; color: var(--text-main);">💾 النسخ الاحتياطي والأمان</h3>
-      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 14px;">البيانات محفوظة على الجهاز فقط. صدّر نسخة بشكل دوري لضمان الأمان.</p>
-      <button class="btn alt full" id="ex">⬇️ تصدير نسخة احتياطية</button>
-      <label class="btn alt full" style="text-align:center; display:block; cursor:pointer; margin-top: 10px;">⬆️ استرجاع نسخة<input type="file" id="im" accept=".json" hidden></label>
-    </div>
-
-    <div class="card">
-      <h3 style="margin-bottom: 10px; font-size: 16px; color: var(--text-main);">🛠️ أدوات النظام</h3>
-      <button class="btn alt full" id="demo" style="margin-bottom: 10px;">🧪 إضافة بيانات تجريبية</button>
-      <button class="btn bad full" id="rs">🗑 مسح كل البيانات</button>
-    </div>
-  `;
-
-  $('#sv', el).onclick = async () => { 
-    for (const [k, i] of [['company', 'co'], ['phone', 'ph'], ['address', 'ad'], ['currency', 'cu'], ['costing', 'cs']]) {
-      await setSetting(k, $('#' + i, el).value.trim()); 
-    }
-    toast('تم الحفظ ✓'); 
-  };
-
-  $('#ex', el).onclick = async () => {
-    const a = document.createElement('a'); 
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(await exportAll())], { type: 'application/json' }));
-    a.download = `wms-backup-${new Date().toISOString().slice(0, 10)}.json`; 
-    a.click();
-  };
-
-  $('#im', el).onchange = async e => {
-    const f = e.target.files[0]; if (!f) return;
-    try {
-      let data; 
-      try { data = JSON.parse(await f.text()); } catch { throw new Error('ملف غير صالح: ليس بصيغة JSON'); }
-      validateBackup(data);
-      if (!confirm('سيتم استبدال كل البيانات الحالية. متابعة؟')) return;
-      await importAll(data); 
-      toast('تم الاسترجاع ✓'); 
-      location.hash = '#/'; 
-      location.reload();
-    } catch (err) { 
-      toast(err.message || 'ملف غير صالح'); 
-    } finally { 
-      e.target.value = ''; 
-    }
-  };
-
-  $('#rs', el).onclick = async () => { 
-    if (confirm('حذف كل البيانات نهائياً؟') && confirm('تأكيد أخير: لا يمكن التراجع!')) { 
-      await resetAll(); 
-      toast('تم المسح'); 
-      location.hash = '#/'; 
-    } 
-  };
-
-  $('#demo', el).onclick = async () => {
-    const mk = (name, cat, bc, big, f, cost, wh, rt, open) => saveProduct({ name, category: cat, barcode: bc, baseUnit: 'قطعة', units: [{ name: 'قطعة', factor: 1 }, { name: big, factor: f }], minStock: f * 2, tiers: [], prices: { cost, wholesale: wh, semi: +(wh * 1.05).toFixed(2), retail: rt } }, open, cost);
-    try {
-      await mk('أرز 1 كجم', 'حبوب', '6221000000011', 'كرتونة', 12, 30, 34, 40, 120);
-      await mk('سكر 1 كجم', 'حبوب', '6221000000028', 'كرتونة', 10, 28, 31, 36, 100);
-      await mk('زيت عباد 1 لتر', 'زيوت', '6221000000035', 'كرتونة', 12, 60, 66, 75, 96);
-      await mk('مكرونة 400 جم', 'معلبات', '6221000000042', 'كرتونة', 20, 9, 10.5, 13, 200);
-      await put('parties', { type: 'customer', name: 'سوبر ماركت النور', phone: '01000000000', group: 'wholesale', creditLimit: 50000, balance: 0 });
-      await put('parties', { type: 'supplier', name: 'شركة التوريدات الغذائية', phone: '01111111111', balance: 0 });
-      toast('تمت إضافة البيانات التجريبية ✓');
-    } catch (e) { 
-      toast(e.message); 
+function listPage(type) {
+  const isC = type === 'customer';
+  return {
+    title: isC ? 'العملاء' : 'الموردون',
+    async render(el) {
+      const [all, co] = await Promise.all([getAll('parties'), coInfo()]), L0 = all.filter(p => p.type === type);
+      const tot = r2(L0.filter(p => p.balance > 0).reduce((s, p) => s + p.balance, 0));
+      el.innerHTML = head(isC ? 'العملاء' : 'الموردون', `${L0.length} ${isC ? 'عميل' : 'مورد'}`, 'users', `<button class="btn" id="add">${ic('plus', 19)} ${isC ? 'عميل جديد' : 'مورد جديد'}</button>`, isC ? 'b' : 'a') +
+        `<div class="kpi ${isC ? 'b' : 'r'} mb"><div class="top"><span class="ci sm ${isC ? 'b' : 'r'}">${ic(isC ? 'users' : 'truck', 20)}</span></div><div><small>${isC ? 'إجمالي المستحق لنا' : 'إجمالي المستحق علينا'}</small><b>${money(tot)}<i>${esc(co.cur)}</i></b></div></div>
+        <div class="sbox"><span class="sico">${ic('search', 19)}</span><input id="s" type="search" placeholder="بحث بالاسم أو الهاتف…"></div><div class="list" id="l"></div>`;
+      const draw = () => {
+        const q = $('#s', el).value.trim().toLowerCase();
+        $('#l', el).innerHTML = L0.filter(p => !q || (p.name + (p.phone || '')).toLowerCase().includes(q)).map(p => `<a class="it" href="#/party/${p.id}"><span class="av">${esc(p.name.trim()[0] || '؟')}</span><div class="tx"><b class="trunc">${esc(p.name)}</b><small>${esc(p.phone || '')}${isC && p.group ? ' • ' + GROUPS[p.group] : ''}</small></div><div class="end">${p.balance ? `<b class="${p.balance > 0 ? (isC ? 'neg' : 'pos') : ''}">${money(Math.abs(p.balance))} ${esc(co.cur)}</b><small>${balanceLabel(p)}</small>` : '<span class="bd ok">مسدد</span>'}</div></a>`).join('') || '<p class="empty">لا يوجد</p>';
+      };
+      draw();
+      $('#s', el).oninput = draw;
+      $('#add', el).onclick = () => partyForm(null, type, () => this.render(el));
     }
   };
 }
+export const customers = listPage('customer');
+export const suppliers = listPage('supplier');
+
+export const party = {
+  title: 'تفاصيل الحساب',
+  async render(el, arg) {
+    const p = await get('parties', +arg); if (!p) throw new Error('الحساب غير موجود');
+    const [L, all, co] = await Promise.all([tx(['ledger'], S => S.ledger.idx('partyId', p.id), 'readonly'), getAll('invoices'), coInfo()]);
+    L.reverse(); const invs = all.filter(i => i.partyId === p.id).reverse(), isC = p.type === 'customer';
+    const sum = f => r2(L.filter(f).reduce((s, x) => s + x.change, 0));
+    const total = sum(x => ['sale', 'purchase', 'opening', 'sale_return', 'purchase_return'].includes(x.type)), paid = -sum(x => x.type === 'payment');
+    let tab = 'invoices';
+    el.innerHTML = `<a class="lnk mb" href="#/${isC ? 'customers' : 'suppliers'}" style="display:inline-flex">${ic('chev', 16)} ${isC ? 'العودة للعملاء' : 'العودة للموردين'}</a>
+      <section class="hero" style="margin-top:8px"><div class="ht"><div><small>${isC ? 'عميل' : 'مورد'}${isC && p.group ? ' • ' + GROUPS[p.group] : ''}</small><h2>${esc(p.name)}</h2><small>${esc([p.phone, p.address].filter(Boolean).join(' • ') || '—')}</small></div><span class="av" style="background:rgba(255,255,255,.18);color:#fff">${esc(p.name.trim()[0] || '؟')}</span></div>
+      <div class="big">${money(Math.abs(p.balance || 0))}<i>${esc(co.cur)} ${p.balance ? balanceLabel(p) : ''}</i></div><small>الرصيد الحالي</small>
+      <div class="acts mt"><button class="btn or" id="pay">${ic('banknote', 19)} ${isC ? 'استلام دفعة' : 'سداد للمورد'}</button><a class="btn glass" href="#/${isC ? 'pos' : 'purchase-new'}" id="newinv">${ic(isC ? 'cart' : 'truck', 19)} فاتورة جديدة</a></div></section>
+      <div class="tiles"><div class="tile"><small>${isC ? 'إجمالي مبيعاته' : 'إجمالي مشترياته'}</small><b>${money(total)}</b></div><div class="tile"><small>${isC ? 'المدفوع' : 'المدفوع له'}</small><b class="pos">${money(paid)}</b></div><div class="tile"><small>المتبقي</small><b class="${p.balance > 0 ? 'neg' : ''}">${money(p.balance || 0)}</b></div></div>
+      <div class="row mb"><button class="btn out sm" id="ed">${ic('pencil', 17)} تعديل</button><button class="btn out sm" id="pr">${ic('printer', 17)} كشف حساب</button><button class="btn out sm" id="del" style="color:var(--r)">${ic('trash', 17)} حذف</button></div>
+      <div class="seg" id="seg"><button data-t="invoices" class="on">الفواتير</button><button data-t="payments">الدفعات</button><button data-t="ledger">كشف الحساب</button></div><div class="list" id="tb"></div>`;
+    const draw = () => {
+      $$seg();
+      let h = '';
+      if (tab === 'invoices') h = invs.map(i => `<button class="it" data-id="${i.id}"><span class="av">${ic('receipt', 20)}</span><div class="tx"><b>${esc(i.no)}</b><small>${typeName(i.type)} • ${fmtDate(i.date)}</small></div><div class="end"><b>${money(i.total)} ${esc(co.cur)}</b>${i.due > 0 ? '<span class="bd warn">آجل</span>' : ''}</div></button>`).join('') || '<p class="empty">لا توجد فواتير</p>';
+      else if (tab === 'payments') h = L.filter(x => x.type === 'payment').map(x => `<div class="it" style="cursor:default"><span class="av" style="background:var(--o-soft);color:var(--o)">${ic('banknote', 20)}</span><div class="tx"><b>${money(-x.change)} ${esc(co.cur)}</b><small>${fmtDate(x.date)} ${esc(x.note || '')}</small></div></div>`).join('') || '<p class="empty">لا توجد دفعات</p>';
+      else h = L.map(x => `<div class="it" style="cursor:default"><div class="tx"><b>${TY[x.type] || x.type}</b><small>${fmtDate(x.date)} ${esc(x.ref || '')}</small></div><div class="end"><b class="${x.change > 0 ? 'neg' : 'pos'}">${x.change > 0 ? '+' : ''}${money(x.change)}</b><small>الرصيد ${money(x.balance)}</small></div></div>`).join('') || '<p class="empty">لا توجد حركات</p>';
+      $('#tb', el).innerHTML = h;
+    };
+    const $$seg = () => el.querySelectorAll('#seg button').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
+    draw();
+    el.onclick = e => {
+      const t = e.target.closest('#seg [data-t]'); if (t) { tab = t.dataset.t; return draw(); }
+      const it = e.target.closest('.it[data-id]'); if (it) return showInvoice(invs.find(i => i.id == it.dataset.id));
+      if (e.target.closest('#newinv')) sessionStorage.setItem('preParty', p.id);
+      if (e.target.closest('#ed')) partyForm(p, p.type, () => party.render(el, arg));
+      if (e.target.closest('#del')) { if (confirm('حذف هذا الحساب؟')) deleteParty(p.id).then(() => { toast('تم الحذف'); location.hash = '#/' + (isC ? 'customers' : 'suppliers'); }).catch(err => toast(err.message, 'err')); }
+      if (e.target.closest('#pay')) sheet(`${sheetHead(isC ? 'استلام دفعة' : 'سداد للمورد', esc(p.name))}<label>المبلغ<input id="a" type="number" step="any" inputmode="decimal"></label><label>طريقة الدفع<select id="m">${METHODS.filter(m => m !== 'آجل').map(m => `<option>${m}</option>`).join('')}</select></label><label>ملاحظة<input id="n"></label><button class="btn or full lg" id="go">تأكيد</button>`,
+        b => $('#go', b).onclick = async () => { try { await payParty(p.id, +$('#a', b).value, $('#n', b).value, $('#m', b).value); toast('تم التسجيل'); closeSheet(); party.render(el, arg); } catch (err) { toast(err.message, 'err'); } });
+      if (e.target.closest('#pr')) printDoc(`<article class="paper" dir="rtl"><div class="hd">${logo(50)}<h3>${esc(co.name)}</h3><p><b>كشف حساب: ${esc(p.name)}</b></p></div><table><thead><tr><th>التاريخ</th><th>البيان</th><th>الحركة</th><th>الرصيد</th></tr></thead><tbody>${[...L].reverse().map(x => `<tr><td>${fmtDay(x.date)}</td><td>${TY[x.type] || ''} ${esc(x.ref || '')}</td><td class="c">${money(x.change)}</td><td class="c">${money(x.balance)}</td></tr>`).join('')}</tbody></table><div class="tot"><table><tbody><tr class="grand"><td>الرصيد الحالي (${balanceLabel(p)})</td><td class="l">${money(p.balance)} ${esc(co.cur)}</td></tr></tbody></table></div></article>`, 'a4');
+    };
+  }
+};
