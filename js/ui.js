@@ -3,7 +3,7 @@ import { setting } from './db.js';
 import { barcodeSvg } from './barcode.js';
 
 export { esc };
-export const BRAND = 'كارمة كاميلا';
+export const BRAND = 'كارمه كارميلا';
 export const $ = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
@@ -52,7 +52,7 @@ const P = {
 };
 export const ic = (n, s = 20, cls = '') => `<svg class="ic ${cls}" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n] || ''}</svg>`;
 
-/** شعار «كارمة كاميلا»: مكعب مخزون ثلاثي الأبعاد + بطاقة سعر برتقالية بخطوط باركود (التدرجات معرّفة في index.html) */
+/** شعار «كارمه كارميلا»: مكعب مخزون ثلاثي الأبعاد + بطاقة سعر برتقالية بخطوط باركود (التدرجات معرّفة في index.html) */
 export const logo = (s = 40) => `<svg class="logo" width="${s}" height="${s}" viewBox="0 0 48 48" role="img" aria-label="${BRAND}"><rect width="48" height="48" rx="14" fill="url(#kkG)"/><rect x=".75" y=".75" width="46.5" height="46.5" rx="13.25" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width="1.5"/><path d="M24 8.5 37.5 16.2 24 24 10.5 16.2z" fill="#fff"/><path d="M10.5 16.2 24 24v15.5L10.5 31.8z" fill="#fff" fill-opacity=".72"/><path d="M37.5 16.2 24 24v15.5l13.5-7.7z" fill="#fff" fill-opacity=".46"/><rect x="25" y="28.5" width="15" height="11" rx="3.4" fill="url(#kkO)" stroke="#0F5132" stroke-width="1.6"/><path d="M28.5 31.5v5M31.5 31.5v5M34.5 31.5v5M37 31.5v5" stroke="#fff" stroke-width="1.3" stroke-linecap="round"/></svg>`;
 
 // ===== الثيم =====
