@@ -1,27 +1,96 @@
-import { $, closeSheet } from './ui.js';
-import { esc } from './core.js';
-import * as home from './pages/home.js';
+import { $, $$, ic, logo, BRAND, esc, initTheme, applyTheme, toggleTheme, closeSheet } from './ui.js';
+import { scanBarcode } from './scanner.js';
+import { ensureCategories } from './services.js';
+import * as dashboard from './pages/dashboard.js';
 import * as products from './pages/products.js';
-import * as parties from './pages/parties.js';
+import * as categories from './pages/categories.js';
 import * as docs from './pages/docs.js';
-import * as finance from './pages/finance.js';
+import * as invoices from './pages/invoices.js';
+import * as parties from './pages/parties.js';
+import * as cash from './pages/cash.js';
+import * as reports from './pages/reports.js';
 import * as settings from './pages/settings.js';
 
-const routes = { '': home, sale: docs.sale, purchase: docs.purchase, invoices: docs.invoices, products, parties, cash: finance.cash, reports: finance.reports, more: settings.more, settings };
+const routes = { '': dashboard, pos: docs.pos, purchases: docs.purchases, 'purchase-new': docs.purchaseNew, products, categories, suppliers: parties.suppliers, customers: parties.customers, party: parties.party, invoices, cash, reports, settings };
+
+// محتويات القائمة الجانبية (الثلاث شروط) — مقسمة حسب وظائف التطبيق
+const MENU = [
+  ['الرئيسية', [['', 'home', 'لوحة التحكم', 'g']]],
+  ['المبيعات', [['pos', 'cart', 'نقطة البيع (الكاشير)', 'o'], ['invoices', 'receipt', 'سجل الفواتير والمرتجعات', 'b']]],
+  ['المخزون', [['products', 'package', 'الأصناف والباركود', 'g'], ['categories', 'boxes', 'التصنيفات', 'p'], ['purchases', 'truck', 'المشتريات (الوارد)', 't'], ['@scan', 'scan', 'مسح باركود بالكاميرا', 'o']]],
+  ['الحسابات', [['customers', 'users', 'العملاء', 'b'], ['suppliers', 'users', 'الموردون', 'a'], ['cash', 'banknote', 'الخزنة والمصروفات', 'g']]],
+  ['التحليلات', [['reports', 'chart', 'التقارير وصافي الربح', 'p']]],
+  ['النظام', [['settings', 'gear', 'الإعدادات والنسخ الاحتياطي', 't']]]
+];
+const TABS = [['', 'home', 'الرئيسية'], ['products', 'package', 'الأصناف'], ['pos', 'cart', 'الكاشير'], ['purchases', 'truck', 'الوارد']];
+const GROUP = { 'purchase-new': 'purchases', party: 'customers' };
+
+let cur = '';
+function shell() {
+  const item = ([k, i, l, t]) => k === '@scan'
+    ? `<button class="dw-it" data-scan><span class="ci sm ${t}">${ic(i, 20)}</span><span class="t">${l}</span>${ic('chev', 18, 'ch')}</button>`
+    : `<a class="dw-it" href="#/${k}" data-k="${k}"><span class="ci sm ${t}">${ic(i, 20)}</span><span class="t">${l}</span>${ic('chev', 18, 'ch')}</a>`;
+  $('#app').innerHTML = `
+  <header id="top"><div class="hrow">
+    <a class="brand" href="#/" aria-label="${BRAND}">${logo(44)}<div class="bn"><b>${BRAND}</b><small>إدارة المخزن والمبيعات</small></div></a>
+    <div class="hacts"><button class="ibtn" id="theme" aria-label="تغيير الثيم"></button><button class="ibtn" id="menu" aria-label="القائمة">${ic('menu', 22)}</button></div>
+  </div></header>
+  <main id="view"></main>
+  <nav id="tabs"><div class="in">
+    ${TABS.slice(0, 2).map(([k, i, l]) => `<a href="#/${k}" data-k="${k}">${ic(i, 22)}<span>${l}</span><i class="pip"></i></a>`).join('')}
+    <a class="mid" href="#/pos" data-k="pos" aria-label="الكاشير"><span class="circ">${ic('cart', 28)}</span><span class="lb">الكاشير</span></a>
+    <a href="#/purchases" data-k="purchases">${ic('truck', 22)}<span>الوارد</span><i class="pip"></i></a>
+    <button class="tb" id="more">${ic('menu', 22)}<span>المزيد</span><i class="pip"></i></button>
+  </div></nav>
+  <div id="drawer"><div class="dw-bg" data-dw></div><aside class="dw-panel" role="dialog" aria-label="القائمة">
+    <div class="dw-hd">${logo(46)}<div><b>${BRAND}</b><small>نظام المخزن والمبيعات</small></div><button class="ibtn" data-dw aria-label="إغلاق">${ic('x', 20)}</button></div>
+    <div class="dw-body">${MENU.map(([t, items]) => `<div class="dw-sec">${t}</div>${items.map(item).join('')}`).join('')}</div>
+    <div class="dw-ft"><div class="dw-st" id="dws"><i></i><span id="dwt">يعمل بدون إنترنت • البيانات محفوظة على جهازك</span></div><a class="btn soft full" href="#/settings">${ic('download', 19)} نسخة احتياطية</a></div>
+  </aside></div>`;
+  applyTheme(document.documentElement.dataset.theme || 'light');
+  $('#theme').onclick = toggleTheme;
+  $('#menu').onclick = $('#more').onclick = openDrawer;
+  $('#drawer').onclick = e => {
+    if (e.target.closest('[data-dw]')) return closeDrawer();
+    if (e.target.closest('a.dw-it')) return closeDrawer();
+    if (e.target.closest('[data-scan]')) { closeDrawer(); doScan(); }
+  };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+  netStatus();
+}
+const openDrawer = () => $('#drawer').classList.add('open');
+const closeDrawer = () => $('#drawer').classList.remove('open');
+function netStatus() {
+  const on = navigator.onLine, s = $('#dws'); if (!s) return;
+  s.classList.toggle('off', !on);
+  $('#dwt').textContent = on ? 'متصل • البيانات محفوظة على جهازك' : 'بدون إنترنت • التطبيق يعمل بشكل كامل';
+}
+addEventListener('online', netStatus); addEventListener('offline', netStatus);
+
+function doScan() {
+  scanBarcode(code => {
+    const r = routes[cur];
+    if (r && r.onScan) return r.onScan(code);
+    sessionStorage.setItem('preQ', code);
+    if (cur === 'products') nav(); else location.hash = '#/products';
+  });
+}
 
 async function nav() {
-  closeSheet();
-  const k = location.hash.replace(/^#\/?/, '').split('?')[0];
-  const r = routes[k] || routes[''];
-  $('#title').textContent = r.title;
-  $('#net').textContent = navigator.onLine ? '' : 'بدون إنترنت';
-  document.querySelectorAll('#tabs a').forEach(a => a.classList.toggle('on', a.dataset.k.split(',').includes(k)));
-  try { await r.render($('#view')); } catch (e) { $('#view').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+  closeSheet(); closeDrawer();
+  const m = location.hash.replace(/^#\/?/, '').split('?')[0].split('/'), name = m[0] || '', arg = m[1];
+  cur = routes[name] ? name : ''; const r = routes[cur];
+  const grp = GROUP[cur] || cur;
+  $$('#tabs [data-k],#drawer a.dw-it').forEach(a => a.classList.toggle('on', a.dataset.k === grp));
+  $('#more').classList.toggle('on', !TABS.some(t => t[0] === grp));
+  document.title = `${BRAND} — ${r.title}`;
+  const v = $('#view'); v.onclick = v.onchange = v.oninput = v.onkeydown = null;
+  try { await r.render(v, arg); } catch (e) { console.error(e); v.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
   scrollTo(0, 0);
 }
 addEventListener('hashchange', nav);
-nav();
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
-if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); // يمنع المتصفح من مسح البيانات
-addEventListener('online', () => { $('#net').textContent = ''; });
-addEventListener('offline', () => { $('#net').textContent = 'بدون إنترنت'; });
+
+initTheme(); shell();
+ensureCategories().catch(() => { }).then(nav);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
