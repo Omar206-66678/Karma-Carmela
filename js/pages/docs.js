@@ -145,5 +145,5 @@ async function listPurchases(el) {
   };
   draw();
   el.onchange = e => { if (e.target.id === 'f') draw(); };
-  el.onclick = e => { const b = e.target.closest('.it[data-id]'); if (b) showInvoice(I.find(i => i.id == b.dataset.id)); };
+  el.onclick = e => { const b = e.target.closest('.it[data-id]'); if (b) showInvoice(I.find(i => i.id == b.dataset.id)); }; 
 }
