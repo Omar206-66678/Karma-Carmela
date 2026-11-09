@@ -30,6 +30,18 @@
   --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* --- دعم تبديل المظهر المضيء (Light Theme) --- */
+body.light-theme {
+  --bg-app: #f1f5f9;
+  --bg-surface: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-dim: #94a3b8;
+  --border-color: rgba(0, 0, 0, 0.08);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -210,6 +222,16 @@ button:active, .btn:active, #view a.btn:active {
 
 .btn.alt:hover {
   background: var(--bg-card-hover);
+}
+
+.btn.bad {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.btn.bad:hover {
+  opacity: 0.9;
 }
 
 /* --- صفحة "المزيد" والقوائم الداخلية --- */
