@@ -1,35 +1,34 @@
 /* ==========================================
-   WPS & Wholesale Management - Complete Theme
+   WPS & Wholesale Management - Ultra Modern Theme v4
    ========================================== */
 
 :root {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-card: #1e293b;
-  --bg-card-hover: #263548;
-  --surface: #111827;
+  --bg-primary: #090d16;
+  --bg-secondary: #131c2e;
+  --bg-card: #1b263b;
+  --bg-card-hover: #22304a;
+  --surface: #0e1626;
   
-  --accent-primary: #0F766E; /* لون الهوية الأساسي للمتجر */
+  --accent-primary: #0d9488; /* Teal العصري الجذاب */
   --accent-primary-hover: #14b8a6;
-  --accent-glow: rgba(15, 118, 110, 0.25);
+  --accent-glow: rgba(13, 148, 136, 0.25);
   
-  --text-main: #f8fafc;
+  --text-main: #f1f5f9;
   --text-muted: #94a3b8;
   --text-dim: #64748b;
   
   --border-color: rgba(255, 255, 255, 0.08);
   --border-focus: #14b8a6;
   
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.18);
-  --shadow-modal: 0 -10px 30px rgba(0, 0, 0, 0.6);
+  --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+  --shadow-modal: 0 -10px 40px rgba(0, 0, 0, 0.8);
   
   --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
   --radius-full: 9999px;
   
-  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
@@ -45,37 +44,38 @@ body {
   color: var(--text-main);
   direction: rtl;
   min-height: 100vh;
-  padding-bottom: 90px;
+  padding-bottom: 100px;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 /* --- الهيدر العلوي (#top) --- */
 #top {
-  background: linear-gradient(135deg, #0F766E, #115e59);
+  background: linear-gradient(135deg, #0f766e, #0d9488);
   color: #fff;
-  padding: 16px 20px;
+  padding: 18px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   position: sticky;
   top: 0;
   z-index: 800;
 }
 
 #top h1 {
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 700;
+  letter-spacing: -0.3px;
 }
 
 #top .badge, header .badge {
   background: rgba(255, 255, 255, 0.2);
-  padding: 4px 12px;
+  padding: 5px 12px;
   border-radius: var(--radius-full);
   font-size: 12px;
-  font-weight: 500;
-  backdrop-filter: blur(4px);
+  font-weight: 600;
+  backdrop-filter: blur(6px);
   color: #fff;
 }
 
@@ -86,11 +86,21 @@ body {
   margin: 0 auto;
 }
 
-/* --- شبكة الإحصائيات (Grid & Stats) المتوافقة مع home.js --- */
+/* --- تحويل أي بطاقة أو قسم تلقائياً إلى تصميم عصري فاخر --- */
+#view > div, #view .card, #view .box, #view form {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-card);
+}
+
+/* --- شبكة الإحصائيات (الصفحة الرئيسية) --- */
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 14px;
 }
 
@@ -98,24 +108,29 @@ body {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 14px;
-  box-shadow: var(--shadow-md);
+  padding: 16px;
+  box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   transition: var(--transition);
 }
 
+.stat:active {
+  transform: scale(0.98);
+}
+
 .stat small {
   color: var(--text-muted);
   font-size: 12px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   display: block;
 }
 
 .stat b {
-  font-size: 16px;
+  font-size: 17px;
   color: var(--text-main);
+  font-weight: 700;
 }
 
 .stat b small {
@@ -124,36 +139,63 @@ body {
   color: var(--text-dim);
 }
 
-/* مؤشرات الألوان الجانبية للإحصائيات */
+/* تلوين الحواف الجانبية للإحصائيات بطريقة أنيقة */
 .stat.g { border-right: 4px solid #10b981; }
-.stat.p { border-right: 4px solid #3b82f6; }
+.stat.p { border-right: 4px solid #0ea5e9; }
 .stat.o { border-right: 4px solid #f59e0b; }
 .stat.r { border-right: 4px solid #ef4444; }
 
-/* --- صف الأزرار (Row & Buttons) --- */
-.row {
-  display: flex;
-  gap: 10px;
+/* --- الحقول والنماذج (Inputs & Forms) --- */
+input, select, textarea {
+  width: 100%;
+  background-color: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  color: var(--text-main);
+  font-size: 15px;
+  outline: none;
+  transition: var(--transition);
+  margin-top: 6px;
+  margin-bottom: 16px;
 }
 
-.btn {
+input:focus, select:focus, textarea:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 4px var(--accent-glow);
+  background-color: var(--bg-secondary);
+}
+
+label {
+  display: block;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+/* --- الأزرار العصرية --- */
+button, .btn, input[type="submit"], #view a.btn {
   display: inline-block;
-  background: linear-gradient(135deg, #0F766E, #14b8a6);
+  background: linear-gradient(135deg, #0d9488, #14b8a6);
   color: #fff;
   border: none;
   border-radius: var(--radius-sm);
-  padding: 12px 16px;
+  padding: 14px 20px;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3);
+  box-shadow: 0 4px 15px rgba(13, 148, 136, 0.35);
   text-align: center;
   text-decoration: none;
   transition: var(--transition);
+  width: 100%;
+  margin: 6px 0;
 }
 
-.btn.full {
-  width: 100%;
+button:active, .btn:active, #view a.btn:active {
+  transform: translateY(1px);
+  opacity: 0.9;
 }
 
 .btn.alt {
@@ -167,34 +209,55 @@ body {
   background: var(--bg-card-hover);
 }
 
-/* --- قائمة التنبيهات والأصناف قاربت على النفاد --- */
-h3 {
-  font-size: 15px;
+/* --- تنسيق صفحة "المزيد" والقوائم والروابط العادية تلقائياً لتصبح كبطاقات --- */
+#view a:not(.btn) {
+  display: block;
+  background-color: var(--bg-secondary);
   color: var(--text-main);
-  margin: 16px 0 8px 0;
+  text-decoration: none;
+  padding: 14px 18px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  font-weight: 500;
+  transition: var(--transition);
 }
 
+#view a:not(.btn):hover {
+  background-color: var(--bg-card-hover);
+  border-color: var(--accent-primary);
+  transform: translateX(-4px);
+}
+
+/* --- القوائم والعناصر (Lists & Items) --- */
 .list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .item {
-  background-color: var(--bg-card);
+  background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  padding: 12px 16px;
+  padding: 14px 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+h3 {
+  font-size: 16px;
+  color: var(--text-main);
+  margin: 18px 0 10px 0;
+  font-weight: 600;
 }
 
 .badge.warn {
-  background-color: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-  padding: 4px 10px;
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  padding: 5px 12px;
   border-radius: var(--radius-full);
   font-size: 12px;
   font-weight: 600;
@@ -203,9 +266,9 @@ h3 {
 .empty {
   text-align: center;
   color: var(--text-muted);
-  padding: 16px;
-  font-size: 13px;
-  background: var(--bg-card);
+  padding: 20px;
+  font-size: 14px;
+  background: var(--bg-secondary);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
 }
@@ -218,14 +281,14 @@ h3 {
   right: 0;
   max-width: 480px;
   margin: 0 auto;
-  background: rgba(15, 23, 42, 0.95);
-  backdrop-filter: blur(16px);
+  background: rgba(19, 28, 46, 0.95);
+  backdrop-filter: blur(20px);
   border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: space-around;
-  padding: 8px 4px;
+  padding: 10px 4px;
   z-index: 900;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
 }
 
 #tabs a {
@@ -236,13 +299,13 @@ h3 {
   text-decoration: none;
   font-size: 11px;
   font-weight: 500;
-  padding: 6px 12px;
+  padding: 6px 14px;
   border-radius: var(--radius-sm);
   transition: var(--transition);
 }
 
 #tabs a span {
-  margin-top: 3px;
+  margin-top: 4px;
 }
 
 #tabs a:hover, #tabs a.on {
@@ -250,7 +313,7 @@ h3 {
   background: var(--accent-glow);
 }
 
-/* --- النوافذ المنبثقة والتنبيهات --- */
+/* --- النوافذ المنبثقة (#sheet) --- */
 #sheet {
   position: fixed;
   inset: 0;
@@ -267,8 +330,8 @@ h3 {
 #sheet .sheet-bg {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(6px);
 }
 
 #sheet .sheet-box {
@@ -276,9 +339,9 @@ h3 {
   background: var(--bg-secondary);
   width: 100%;
   max-width: 480px;
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
-  padding: 24px 20px 36px 20px;
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  padding: 28px 20px 40px 20px;
   box-shadow: var(--shadow-modal);
   border-top: 1px solid var(--border-color);
   max-height: 85vh;
@@ -287,30 +350,38 @@ h3 {
 
 #sheet .sheet-box .x {
   position: absolute;
-  top: 16px;
-  left: 16px;
+  top: 18px;
+  left: 18px;
   background: var(--surface);
   border: 1px solid var(--border-color);
   color: var(--text-muted);
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: var(--transition);
+}
+
+#sheet .sheet-box .x:hover {
+  background: #ef4444;
+  color: #fff;
+  border-color: #ef4444;
 }
 
 #toast {
   position: fixed;
-  bottom: 100px;
+  bottom: 110px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--bg-secondary);
+  background: var(--bg-card);
   color: var(--text-main);
-  padding: 10px 20px;
+  padding: 12px 24px;
   border-radius: var(--radius-full);
   border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-card);
   font-size: 13px;
   z-index: 1100;
   opacity: 0;
