@@ -27,36 +27,51 @@
 <div id="sheet"></div><div id="toast"></div><div id="printArea"></div>
 <noscript><p style="padding:24px;text-align:center">يلزم تفعيل JavaScript لتشغيل التطبيق.</p></noscript>
 <script>
-/* تشخيص تلقائي: إن لم يظهر التطبيق خلال ثوانٍ يعرض الملفات الناقصة والخطأ بدل الشاشة السوداء */
+/* مُقلِع التطبيق: تنظيف النسخ القديمة مرة واحدة + تحميل طازج للملفات (يتجاوز كاش المتصفح) + تشخيص دقيق عند أي خطأ */
 (function () {
-  var FILES = ['css/app.css', 'js/app.js', 'js/db.js', 'js/core.js', 'js/barcode.js', 'js/decoder.js', 'js/scanner.js', 'js/services.js', 'js/reports.js', 'js/ui.js', 'js/pages/dashboard.js', 'js/pages/products.js', 'js/pages/categories.js', 'js/pages/docs.js', 'js/pages/invoices.js', 'js/pages/parties.js', 'js/pages/cash.js', 'js/pages/reports.js', 'js/pages/settings.js', 'js/pages/more.js', 'manifest.webmanifest', 'icon.svg'];
-  var lastErr = '';
-  addEventListener('error', function (e) { lastErr = (e.message || 'خطأ') + (e.filename ? ' — ' + e.filename.split('/').slice(-2).join('/') + ':' + e.lineno : ''); });
+  var VER = 'kk-v5';
+  var FILES = ['css/app.css', 'js/db.js', 'js/core.js', 'js/barcode.js', 'js/decoder.js', 'js/ui.js', 'js/scanner.js', 'js/reports.js', 'js/services.js', 'js/pages/dashboard.js', 'js/pages/products.js', 'js/pages/categories.js', 'js/pages/docs.js', 'js/pages/invoices.js', 'js/pages/parties.js', 'js/pages/cash.js', 'js/pages/reports.js', 'js/pages/settings.js', 'js/pages/more.js', 'js/app.js'];
+  var ok = false, lastErr = '';
+  addEventListener('error', function (e) { if (e && e.message) lastErr = e.message + (e.filename ? ' — ' + e.filename.split('/').slice(-2).join('/') + ':' + e.lineno : ''); });
   addEventListener('unhandledrejection', function (e) { lastErr = String((e.reason && e.reason.message) || e.reason); });
-  window.kkReset = function () {
-    var p = (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) ? navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }) : Promise.resolve();
-    p.then(function () { return window.caches ? caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }) : 0; }).then(function () { location.reload(); });
-  };
-  setTimeout(function () {
-    var app = document.getElementById('app');
-    if (!app || app.children.length) return;
-    Promise.all(FILES.map(function (f) {
-      return fetch(f, { cache: 'no-store' }).then(function (r) { return r.ok ? '' : f + ' (' + r.status + ')'; }).catch(function () { return f + ' (تعذّر التحميل)'; });
-    })).then(function (m) {
+
+  function clean(force) {
+    var done = false; try { done = localStorage.getItem('kk-clean') === VER; } catch (e) { }
+    if (done && !force) return Promise.resolve(false);
+    var sw = (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) ? navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }) : Promise.resolve();
+    return sw.then(function () { return window.caches ? caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }) : 0; })
+      .then(function () { try { localStorage.setItem('kk-clean', VER); return localStorage.getItem('kk-clean') === VER; } catch (e) { return false; } });
+  }
+  window.kkReset = function () { clean(true).then(function () { location.reload(); }); };
+  function warm() { return Promise.all(FILES.map(function (f) { return fetch(f, { cache: 'reload' }).catch(function () { }); })); }
+
+  function panel(msg) {
+    var app = document.getElementById('app'); if (!app || ok) return;
+    Promise.all(FILES.map(function (f) { return fetch(f, { cache: 'no-store' }).then(function (r) { return r.ok ? '' : f + ' (' + r.status + ')'; }).catch(function () { return f + ' (تعذّر التحميل)'; }); })).then(function (m) {
       m = m.filter(Boolean);
-      app.innerHTML = '<div style="padding:24px;color:#fff;background:#0B130F;min-height:100vh;font-family:system-ui,sans-serif;line-height:1.8">' +
-        '<h2 style="margin:0 0 8px">تعذّر تشغيل التطبيق</h2>' +
-        (m.length ? '<p>هذه الملفات ناقصة أو في مكان خاطئ على GitHub (يجب الحفاظ على الفولدرات كما هي):</p><ul id="kkm" style="direction:ltr;text-align:left;color:#FFB45E"></ul>'
-          : '<p>كل الملفات موجودة. غالباً هناك نسخة قديمة محفوظة في المتصفح — اضغطي الزر ليتم مسحها وإعادة التحميل.</p>') +
-        '<pre id="kkerr" style="direction:ltr;text-align:left;white-space:pre-wrap;color:#ff8a7d"></pre>' +
+      app.innerHTML = '<div style="padding:24px;color:#fff;background:#0B130F;min-height:100vh;font-family:system-ui,sans-serif;line-height:1.8"><h2 style="margin:0 0 8px">تعذّر تشغيل التطبيق</h2>' +
+        (m.length ? '<p>هذه الملفات ناقصة أو في مكان خاطئ على GitHub (يجب الحفاظ على الفولدرات كما هي):</p><ul id="kkm" style="direction:ltr;text-align:left;color:#FFB45E"></ul>' : '<p>كل الملفات موجودة، وهذا هو سبب التوقف بالتحديد:</p>') +
+        '<pre id="kkerr" style="direction:ltr;text-align:left;white-space:pre-wrap;color:#ff8a7d;background:#14211A;padding:12px;border-radius:12px"></pre>' +
         '<button onclick="kkReset()" style="padding:14px 22px;border:0;border-radius:14px;background:#FF7A00;color:#fff;font-weight:800;font-size:16px">مسح الكاش وإعادة التحميل</button></div>';
-      var ul = document.getElementById('kkm');
-      if (ul) m.forEach(function (x) { var li = document.createElement('li'); li.textContent = x; ul.appendChild(li); });
-      document.getElementById('kkerr').textContent = lastErr;
+      var ul = document.getElementById('kkm'); if (ul) m.forEach(function (x) { var li = document.createElement('li'); li.textContent = x; ul.appendChild(li); });
+      document.getElementById('kkerr').textContent = msg || lastErr || 'لا يوجد نص خطأ';
     });
-  }, 3500);
+  }
+  // تحديد الملف المعطوب بدقة: استيراد كل وحدة على حدة بترتيب الاعتماد
+  function diagnose(first) {
+    var i = 0;
+    (function next() {
+      if (i >= FILES.length) return panel(first && (first.name + ': ' + first.message));
+      var f = FILES[i++]; if (!/\.js$/.test(f)) return next();
+      import('./' + f).then(next, function (e) { panel(f + ' — ' + e.name + ': ' + e.message); });
+    })();
+  }
+  clean(false).then(function (needReload) {
+    if (needReload) return location.reload();                 // بعد إزالة الـ Service Worker القديم نعيد التحميل مرة واحدة
+    return warm().then(function () { return import('./js/app.js'); }).then(function () { ok = true; }, diagnose);
+  });
+  setTimeout(function () { var a = document.getElementById('app'); if (a && !a.children.length && !ok) panel('انتهت المهلة دون ظهور التطبيق — الاتصال بطيء أو توقف التحميل'); }, 20000);
 })();
 </script>
-<script type="module" src="js/app.js"></script>
 </body>
 </html>
