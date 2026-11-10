@@ -282,4 +282,4 @@ button.pc.off{opacity:.5}
 .mcard h3{font-size:17px;font-weight:900;margin-top:8px}.mcard p{font-size:13px;color:var(--muted);line-height:1.5}
 .mc-ft{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
 .mc-ft b{font-weight:900;font-size:14.5px}
-.ch{color:var(--muted)}
+.ch{color:var(--muted)} 
