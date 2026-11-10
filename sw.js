@@ -1,9 +1,9 @@
-const V = 'kk-v4';
+const V = 'kk-v5';
 const F = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'css/app.css', 'js/app.js', 'js/db.js', 'js/core.js', 'js/barcode.js', 'js/decoder.js', 'js/scanner.js', 'js/services.js', 'js/reports.js', 'js/ui.js', 'js/pages/dashboard.js', 'js/pages/products.js', 'js/pages/categories.js', 'js/pages/docs.js', 'js/pages/invoices.js', 'js/pages/parties.js', 'js/pages/cash.js', 'js/pages/reports.js', 'js/pages/settings.js', 'js/pages/more.js'];
 const FONT = /(^|\.)(fonts\.googleapis\.com|fonts\.gstatic\.com)$/;
 // التثبيت لا يفشل بسبب ملف ناقص: نحاول كل ملف على حدة
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(V).then(c => Promise.all(F.map(f => c.add(f).catch(() => { })))));
+  e.waitUntil(caches.open(V).then(c => Promise.all(F.map(f => c.add(new Request(f, { cache: 'reload' })).catch(() => { })))));
   self.skipWaiting();
 });
 self.addEventListener('activate', e => {
