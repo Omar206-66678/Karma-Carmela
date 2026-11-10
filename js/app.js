@@ -95,4 +95,4 @@ addEventListener('hashchange', nav);
 initTheme(); shell();
 ensureCategories().catch(() => { }).then(nav);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
-if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); 
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
