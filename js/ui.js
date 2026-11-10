@@ -154,4 +154,4 @@ export function printDoc(html, mode = 'a4') {
   $('#pageStyle').textContent = mode === 'thermal' ? '@page{size:80mm auto;margin:3mm}' : '@page{size:A4;margin:12mm}';
   setTimeout(() => window.print(), 120);
 }
-addEventListener('afterprint', () => document.body.classList.remove('thermal', 'a4'));
+addEventListener('afterprint', () => document.body.classList.remove('thermal', 'a4')); 
