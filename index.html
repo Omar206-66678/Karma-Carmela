@@ -27,59 +27,48 @@
 <div id="sheet"></div><div id="toast"></div><div id="printArea"></div>
 <noscript><p style="padding:24px;text-align:center">يلزم تفعيل JavaScript لتشغيل التطبيق.</p></noscript>
 <script>
-/* مُقلِع التطبيق: تنظيف النسخ القديمة مرة واحدة + تحميل طازج للملفات (يتجاوز كاش المتصفح) + تشخيص دقيق عند أي خطأ */
 (function () {
-  var VER = 'kk-v6';
-  var FILES = ['css/app.css', 'js/db.js', 'js/core.js', 'js/auth.js', 'js/barcode.js', 'js/decoder.js', 'js/ui.js', 'js/scanner.js', 'js/reports.js', 'js/services.js', 'js/pages/dashboard.js', 'js/pages/products.js', 'js/pages/categories.js', 'js/pages/docs.js', 'js/pages/invoices.js', 'js/pages/parties.js', 'js/pages/cash.js', 'js/pages/reports.js', 'js/pages/settings.js', 'js/pages/login.js', 'js/pages/more.js', 'js/app.js'];
-  var MARK = {"js/app.js": "closeDrawer", "js/auth.js": "pbkdf2", "js/barcode.js": "body12", "js/core.js": "below1000", "js/db.js": "result", "js/decoder.js": "firstDark", "js/pages/cash.js": "income", "js/pages/categories.js": "padding", "js/pages/dashboard.js": "weekTotal", "js/pages/docs.js": "drawCart", "js/pages/invoices.js": "returnSheet", "js/pages/login.js": "submit", "js/pages/more.js": "template", "js/pages/parties.js": "partyForm", "js/pages/products.js": "f_name", "js/pages/reports.js": "RANGES", "js/pages/settings.js": "standalone", "js/reports.js": "setHours", "js/scanner.js": "stream", "js/services.js": "unitCost", "js/ui.js": "circle"};
-  var ok = false, lastErr = '';
-  addEventListener('error', function (e) { if (e && e.message) lastErr = e.message + (e.filename ? ' — ' + e.filename.split('/').slice(-2).join('/') + ':' + e.lineno : ''); });
-  addEventListener('unhandledrejection', function (e) { lastErr = String((e.reason && e.reason.message) || e.reason); });
+  var ok = false;
+  function showErr(title, detail) {
+    if (ok) return;
+    var app = document.getElementById('app');
+    if (!app) return;
+    app.innerHTML =
+      '<div style="padding:24px;color:#fff;background:#0B130F;min-height:100vh;font-family:system-ui,sans-serif;line-height:1.8">' +
+      '<h2 style="margin:0 0 8px;color:#FF7A00">' + title + '</h2>' +
+      '<pre style="direction:ltr;text-align:left;white-space:pre-wrap;color:#ff8a7d;background:#14211A;padding:12px;border-radius:12px;font-size:13px">' +
+      String(detail || 'خطأ غير معروف') + '</pre>' +
+      '<button onclick="location.reload(true)" style="margin-top:12px;padding:12px 20px;border:0;border-radius:12px;background:#1FA971;color:#fff;font-weight:700;font-size:15px">إعادة المحاولة</button>' +
+      '</div>';
+  }
 
-  function clean(force) {
-    var done = false; try { done = localStorage.getItem('kk-clean') === VER; } catch (e) { }
-    if (done && !force) return Promise.resolve(false);
-    var sw = (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) ? navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }) : Promise.resolve();
-    return sw.then(function () { return window.caches ? caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }) : 0; })
-      .then(function () { try { localStorage.setItem('kk-clean', VER); return localStorage.getItem('kk-clean') === VER; } catch (e) { return false; } });
-  }
-  window.kkReset = function () { clean(true).then(function () { location.reload(); }); };
-  function warm() { return Promise.all(FILES.map(function (f) { return fetch(f, { cache: 'reload' }).catch(function () { }); })); }
-
-  function panel(msg) {
-    var app = document.getElementById('app'); if (!app || ok) return;
-    Promise.all(FILES.map(function (f) { return fetch(f, { cache: 'no-store' }).then(function (r) {
-      if (!r.ok) return f + ' (' + r.status + ')';
-      if (!MARK[f]) return '';
-      return r.text().then(function (t) {
-        if (t.indexOf(MARK[f]) !== -1) return '';
-        var first = (t.split('\n').filter(function (l) { return /^(import|export)/.test(l.trim()); })[0] || t.slice(0, 60)).trim().slice(0, 70);
-        return f + ' ← محتواه خاطئ (ليس الملف المطلوب). أول سطر فيه: ' + first;
-      });
-    }).catch(function () { return f + ' (تعذّر التحميل)'; }); })).then(function (m) {
-      m = m.filter(Boolean);
-      app.innerHTML = '<div style="padding:24px;color:#fff;background:#0B130F;min-height:100vh;font-family:system-ui,sans-serif;line-height:1.8"><h2 style="margin:0 0 8px">تعذّر تشغيل التطبيق</h2>' +
-        (m.length ? '<p>هذه الملفات ناقصة أو في مكان خاطئ أو محتواها لا يطابق الملف المطلوب — استبدلي محتواها بالنسخة الصحيحة:</p><ul id="kkm" style="direction:ltr;text-align:left;color:#FFB45E"></ul>' : '<p>كل الملفات موجودة، وهذا هو سبب التوقف بالتحديد:</p>') +
-        '<pre id="kkerr" style="direction:ltr;text-align:left;white-space:pre-wrap;color:#ff8a7d;background:#14211A;padding:12px;border-radius:12px"></pre>' +
-        '<button onclick="kkReset()" style="padding:14px 22px;border:0;border-radius:14px;background:#FF7A00;color:#fff;font-weight:800;font-size:16px">مسح الكاش وإعادة التحميل</button></div>';
-      var ul = document.getElementById('kkm'); if (ul) m.forEach(function (x) { var li = document.createElement('li'); li.textContent = x; ul.appendChild(li); });
-      document.getElementById('kkerr').textContent = msg || lastErr || 'لا يوجد نص خطأ';
-    });
-  }
-  // تحديد الملف المعطوب بدقة: استيراد كل وحدة على حدة بترتيب الاعتماد
-  function diagnose(first) {
-    var i = 0;
-    (function next() {
-      if (i >= FILES.length) return panel(first && (first.name + ': ' + first.message));
-      var f = FILES[i++]; if (!/\.js$/.test(f)) return next();
-      import('./' + f).then(next, function (e) { panel(f + ' — ' + e.name + ': ' + e.message); });
-    })();
-  }
-  clean(false).then(function (needReload) {
-    if (needReload) return location.reload();                 // بعد إزالة الـ Service Worker القديم نعيد التحميل مرة واحدة
-    return warm().then(function () { return import('./js/app.js'); }).then(function () { ok = true; }, diagnose);
+  addEventListener('error', function (e) {
+    showErr('خطأ برمجي أثناء التشغيل', (e.message || '') + '\n' + (e.filename || '') + ':' + (e.lineno || ''));
   });
-  setTimeout(function () { var a = document.getElementById('app'); if (a && !a.children.length && !ok) panel('انتهت المهلة دون ظهور التطبيق — الاتصال بطيء أو توقف التحميل'); }, 20000);
+  addEventListener('unhandledrejection', function (e) {
+    showErr('خطأ غير معالج (Promise)', (e.reason && (e.reason.stack || e.reason.message)) || e.reason);
+  });
+
+  // تنظيف أي Service Worker قديم في الخلفية دون تعطيل فتح التطبيق
+  try {
+    if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+      navigator.serviceWorker.getRegistrations().then(function (rs) {
+        rs.forEach(function (r) { r.unregister(); });
+      });
+    }
+    if (window.caches) {
+      caches.keys().then(function (ks) {
+        ks.forEach(function (k) { caches.delete(k); });
+      });
+    }
+  } catch (e) {}
+
+  // تشغيل التطبيق مباشرة
+  import('./js/app.js')
+    .then(function () { ok = true; })
+    .catch(function (err) {
+      showErr('فشل تحميل التطبيق (app.js)', (err && (err.stack || err.message)) || err);
+    });
 })();
 </script>
 </body>
