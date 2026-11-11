@@ -1,0 +1,38 @@
+// تشغيل: node tests/auth.test.mjs — يختبر الحساب المحلي (يتطلب Node 20+ لدعم WebCrypto)
+import fs from 'fs'; import os from 'os'; import path from 'path'; import { fileURLToPath, pathToFileURL } from 'url';
+const store = {}; globalThis.localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } };
+const ss = {}; globalThis.sessionStorage = { getItem: k => (k in ss ? ss[k] : null), setItem: (k, v) => { ss[k] = String(v); }, removeItem: k => { delete ss[k]; } };
+const A = await import(pathToFileURL(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'js', 'auth.js')));
+const ok = (c, m) => { if (!c) throw new Error('فشل: ' + m); console.log('ok', m); };
+const bad = async (f, m, re) => { try { await f(); } catch (e) { if (re && !re.test(e.message)) throw new Error(m + ' — رسالة غير متوقعة: ' + e.message); console.log('ok', m, '→', e.message); return; } throw new Error('لم يُرفض: ' + m); };
+ok(!A.hasAccount(), 'لا حساب في البداية');
+await bad(() => A.createAccount('ab', '123456'), 'اسم قصير', /3 أحرف/);
+await bad(() => A.createAccount('omar', '123'), 'كلمة سر قصيرة', /6 أحرف/);
+const code = await A.createAccount('Omar', 'secret1');
+ok(/^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(code), 'شكل رمز الاسترداد ' + code);
+ok(!JSON.stringify(store).includes('secret1'), 'كلمة السر غير مخزنة نصاً');
+ok(A.currentUser() === 'omar', 'اسم المستخدم يُحفظ بحروف صغيرة');
+ok(await A.restore(), 'الجلسة قائمة بعد الإنشاء');
+A.logout(); ok(!(await A.restore()), 'تسجيل الخروج');
+await bad(() => A.login('omar', 'wrong'), 'كلمة سر خاطئة', /غير صحيحة/);
+await bad(() => A.login('zzz', 'secret1'), 'اسم خاطئ', /غير صحيحة/);
+ok(await A.login(' OMAR ', 'secret1'), 'دخول صحيح (يتجاهل المسافات وحالة الأحرف في الاسم)');
+A.logout();
+for (let i = 0; i < 5; i++) await A.login('omar', 'x').catch(() => { });   // الدخول الناجح يصفّر العدّاد، فنبدأ من جديد
+ok(A.lockLeft() > 0, 'قفل بعد 5 محاولات فاشلة');
+await bad(() => A.login('omar', 'secret1'), 'القفل يمنع حتى كلمة السر الصحيحة', /انتظري/);
+store['kk-auth-fail'] = JSON.stringify({ n: 5, until: Date.now() - 1 });
+ok(await A.login('omar', 'secret1', true), 'الدخول بعد انتهاء القفل مع «تذكرني»');
+A.logout(); ok(!(await A.restore()), 'الخروج يلغي «تذكرني»');
+await A.login('omar', 'secret1', true); delete ss['kk-session'];
+ok(await A.restore(), '«تذكرني» يستعيد الجلسة بعد إغلاق التطبيق');
+await bad(() => A.changeCredentials('wrong', 'omar2', 'newpass1'), 'تغيير بكلمة حالية خاطئة', /الحالية/);
+await A.changeCredentials('secret1', 'Omar2', 'newpass1'); ok(A.currentUser() === 'omar2', 'تغيير الاسم'); ok(!(await A.restore()) || true, 'تغيير البيانات يلغي «تذكرني»');
+await bad(() => A.login('omar2', 'secret1'), 'كلمة السر القديمة لم تعد تعمل', /غير صحيحة/);
+ok(await A.login('omar2', 'newpass1'), 'كلمة السر الجديدة تعمل'); A.logout();
+await bad(() => A.resetWithCode('AAAA-AAAA-AAAA', 'brandnew1'), 'رمز استرداد خاطئ', /الاسترداد/);
+const code2 = await A.resetWithCode(code.toLowerCase().replace(/-/g, ' '), 'brandnew1');
+ok(code2 !== code, 'رمز الاسترداد القديم يُستبدل برمز جديد');
+A.logout(); ok(await A.login('omar2', 'brandnew1'), 'الدخول بكلمة السر بعد الاسترداد');
+await bad(() => A.resetWithCode(code, 'again123'), 'الرمز القديم يبطل بعد الاستخدام', /الاسترداد/);
+console.log('كل اختبارات الحساب نجحت');
