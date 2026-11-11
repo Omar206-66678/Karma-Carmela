@@ -9,7 +9,7 @@
 <meta name="description" content="كارمه كارميلا — نظام إدارة المخزن والمبيعات يعمل بدون إنترنت">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>كارمه كارميلا</title>
 <script>try{var t=localStorage.getItem('kk-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -29,8 +29,9 @@
 <script>
 /* مُقلِع التطبيق: تنظيف النسخ القديمة مرة واحدة + تحميل طازج للملفات (يتجاوز كاش المتصفح) + تشخيص دقيق عند أي خطأ */
 (function () {
-  var VER = 'kk-v5';
-  var FILES = ['css/app.css', 'js/db.js', 'js/core.js', 'js/barcode.js', 'js/decoder.js', 'js/ui.js', 'js/scanner.js', 'js/reports.js', 'js/services.js', 'js/pages/dashboard.js', 'js/pages/products.js', 'js/pages/categories.js', 'js/pages/docs.js', 'js/pages/invoices.js', 'js/pages/parties.js', 'js/pages/cash.js', 'js/pages/reports.js', 'js/pages/settings.js', 'js/pages/more.js', 'js/app.js'];
+  var VER = 'kk-v6';
+  var FILES = ['css/app.css', 'js/db.js', 'js/core.js', 'js/auth.js', 'js/barcode.js', 'js/decoder.js', 'js/ui.js', 'js/scanner.js', 'js/reports.js', 'js/services.js', 'js/pages/dashboard.js', 'js/pages/products.js', 'js/pages/categories.js', 'js/pages/docs.js', 'js/pages/invoices.js', 'js/pages/parties.js', 'js/pages/cash.js', 'js/pages/reports.js', 'js/pages/settings.js', 'js/pages/login.js', 'js/pages/more.js', 'js/app.js'];
+  var MARK = {"js/app.js": "closeDrawer", "js/auth.js": "pbkdf2", "js/barcode.js": "body12", "js/core.js": "below1000", "js/db.js": "result", "js/decoder.js": "firstDark", "js/pages/cash.js": "income", "js/pages/categories.js": "padding", "js/pages/dashboard.js": "weekTotal", "js/pages/docs.js": "drawCart", "js/pages/invoices.js": "returnSheet", "js/pages/login.js": "submit", "js/pages/more.js": "template", "js/pages/parties.js": "partyForm", "js/pages/products.js": "f_name", "js/pages/reports.js": "RANGES", "js/pages/settings.js": "standalone", "js/reports.js": "setHours", "js/scanner.js": "stream", "js/services.js": "unitCost", "js/ui.js": "circle"};
   var ok = false, lastErr = '';
   addEventListener('error', function (e) { if (e && e.message) lastErr = e.message + (e.filename ? ' — ' + e.filename.split('/').slice(-2).join('/') + ':' + e.lineno : ''); });
   addEventListener('unhandledrejection', function (e) { lastErr = String((e.reason && e.reason.message) || e.reason); });
@@ -47,10 +48,18 @@
 
   function panel(msg) {
     var app = document.getElementById('app'); if (!app || ok) return;
-    Promise.all(FILES.map(function (f) { return fetch(f, { cache: 'no-store' }).then(function (r) { return r.ok ? '' : f + ' (' + r.status + ')'; }).catch(function () { return f + ' (تعذّر التحميل)'; }); })).then(function (m) {
+    Promise.all(FILES.map(function (f) { return fetch(f, { cache: 'no-store' }).then(function (r) {
+      if (!r.ok) return f + ' (' + r.status + ')';
+      if (!MARK[f]) return '';
+      return r.text().then(function (t) {
+        if (t.indexOf(MARK[f]) !== -1) return '';
+        var first = (t.split('\n').filter(function (l) { return /^(import|export)/.test(l.trim()); })[0] || t.slice(0, 60)).trim().slice(0, 70);
+        return f + ' ← محتواه خاطئ (ليس الملف المطلوب). أول سطر فيه: ' + first;
+      });
+    }).catch(function () { return f + ' (تعذّر التحميل)'; }); })).then(function (m) {
       m = m.filter(Boolean);
       app.innerHTML = '<div style="padding:24px;color:#fff;background:#0B130F;min-height:100vh;font-family:system-ui,sans-serif;line-height:1.8"><h2 style="margin:0 0 8px">تعذّر تشغيل التطبيق</h2>' +
-        (m.length ? '<p>هذه الملفات ناقصة أو في مكان خاطئ على GitHub (يجب الحفاظ على الفولدرات كما هي):</p><ul id="kkm" style="direction:ltr;text-align:left;color:#FFB45E"></ul>' : '<p>كل الملفات موجودة، وهذا هو سبب التوقف بالتحديد:</p>') +
+        (m.length ? '<p>هذه الملفات ناقصة أو في مكان خاطئ أو محتواها لا يطابق الملف المطلوب — استبدلي محتواها بالنسخة الصحيحة:</p><ul id="kkm" style="direction:ltr;text-align:left;color:#FFB45E"></ul>' : '<p>كل الملفات موجودة، وهذا هو سبب التوقف بالتحديد:</p>') +
         '<pre id="kkerr" style="direction:ltr;text-align:left;white-space:pre-wrap;color:#ff8a7d;background:#14211A;padding:12px;border-radius:12px"></pre>' +
         '<button onclick="kkReset()" style="padding:14px 22px;border:0;border-radius:14px;background:#FF7A00;color:#fff;font-weight:800;font-size:16px">مسح الكاش وإعادة التحميل</button></div>';
       var ul = document.getElementById('kkm'); if (ul) m.forEach(function (x) { var li = document.createElement('li'); li.textContent = x; ul.appendChild(li); });
