@@ -1,4 +1,6 @@
-import { $, $$, ic, logo, BRAND, esc, initTheme, applyTheme, toggleTheme, closeSheet } from './ui.js';
+import { $, $$, ic, logo, BRAND, esc, initTheme, applyTheme, toggleTheme, closeSheet, toast, Install } from './ui.js';
+import * as Auth from './auth.js';
+import { requireLogin } from './pages/login.js';
 import { scanBarcode } from './scanner.js';
 import { ensureCategories } from './services.js';
 import * as dashboard from './pages/dashboard.js';
@@ -37,6 +39,7 @@ function shell() {
     <a class="brand" href="#/" aria-label="${BRAND}">${logo(44)}<div class="bn"><b>${BRAND}</b><small>إدارة المخزن والمبيعات</small></div></a>
     <div class="hacts"><button class="ibtn" id="theme" aria-label="تغيير الثيم"></button><button class="ibtn" id="menu" aria-label="القائمة">${ic('menu', 22)}</button></div>
   </div></header>
+  <div id="upd" hidden><span>يوجد تحديث جديد جاهز</span><button id="updgo">تحديث الآن</button></div>
   <main id="view"></main>
   <nav id="tabs"><div class="in">
     ${TABS.slice(0, 2).map(([k, i, l]) => `<a href="#/${k}" data-k="${k}">${ic(i, 22)}<span>${l}</span><i class="pip"></i></a>`).join('')}
@@ -47,7 +50,7 @@ function shell() {
   <div id="drawer"><div class="dw-bg" data-dw></div><aside class="dw-panel" role="dialog" aria-label="القائمة">
     <div class="dw-hd">${logo(46)}<div><b>${BRAND}</b><small>نظام المخزن والمبيعات</small></div><button class="ibtn" data-dw aria-label="إغلاق">${ic('x', 20)}</button></div>
     <div class="dw-body">${MENU.map(([t, items]) => `<div class="dw-sec">${t}</div>${items.map(item).join('')}`).join('')}</div>
-    <div class="dw-ft"><div class="dw-st" id="dws"><i></i><span id="dwt">يعمل بدون إنترنت • البيانات محفوظة على جهازك</span></div><a class="btn soft full" href="#/settings">${ic('download', 19)} نسخة احتياطية</a></div>
+    <div class="dw-ft"><div class="dw-user">${ic('user', 18)}<b>${esc(Auth.currentUser())}</b></div><div class="dw-st" id="dws"><i></i><span id="dwt">يعمل بدون إنترنت • البيانات محفوظة على جهازك</span></div><button class="btn or full" id="inst" hidden>${ic('download', 19)} تثبيت التطبيق على الجهاز</button><a class="btn soft full" href="#/settings">${ic('gear', 19)} الإعدادات والنسخ الاحتياطي</a><button class="btn out full" id="lo" style="color:var(--r)">${ic('logout', 19)} تسجيل الخروج</button></div>
   </aside></div>`;
   applyTheme(document.documentElement.dataset.theme || 'light');
   $('#theme').onclick = toggleTheme;
@@ -56,8 +59,12 @@ function shell() {
     if (e.target.closest('[data-dw]')) return closeDrawer();
     if (e.target.closest('a.dw-it')) return closeDrawer();
     if (e.target.closest('[data-scan]')) { closeDrawer(); doScan(); }
+    if (e.target.closest('#lo')) { Auth.logout(); location.reload(); }
+    if (e.target.closest('#inst') && Install.ev) installApp();
   };
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+  $('#updgo').onclick = () => location.reload();
+  if (Install.ev) $('#inst').hidden = false;
   netStatus();
 }
 const openDrawer = () => $('#drawer').classList.add('open');
@@ -92,7 +99,31 @@ async function nav() {
 }
 addEventListener('hashchange', nav);
 
-initTheme(); shell();
-ensureCategories().catch(() => { }).then(nav);
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
-if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+// ---- التثبيت كتطبيق (أندرويد / كمبيوتر) ----
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); Install.ev = e; const b = $('#inst'); if (b) b.hidden = false; });
+addEventListener('appinstalled', () => { Install.ev = null; const b = $('#inst'); if (b) b.hidden = true; toast('تم تثبيت التطبيق'); });
+async function installApp() {
+  const e = Install.ev; if (!e) return;
+  e.prompt(); await e.userChoice.catch(() => { }); Install.ev = null; const b = $('#inst'); if (b) b.hidden = true;
+}
+// ---- التحديثات: يفحص السيرفر دورياً وعند العودة للتطبيق، ويعرض شريط «تحديث الآن» ----
+function registerSW() {
+  if (!('serviceWorker' in navigator)) return;
+  let first = !navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    setInterval(() => reg.update().catch(() => { }), 30 * 60 * 1000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => { }); });
+  }).catch(() => { });
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (first) { first = false; return; } const u = $('#upd'); if (u) u.hidden = false; });
+}
+async function start() {
+  initTheme();
+  await requireLogin();
+  shell();
+  Auth.startIdleWatch(() => location.reload());
+  await ensureCategories().catch(() => { });
+  await nav();
+  registerSW();
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+}
+start();
